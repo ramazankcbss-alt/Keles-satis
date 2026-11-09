@@ -1,163 +1,99 @@
 rules_version = '2';
-
-// Keleş Satış - Firestore güvenlik kuralları (keles-satis projesi)
-// Firma verisini yalnızca üyeler görür. Saha çalışanları yalnızca
-// kendi girdikleri ve aracı oldukları siparişleri görür ve değiştirir.
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function signedIn() { return request.auth != null; }
     function uid() { return request.auth.uid; }
+    function yeni() { return request.resource.data; }
+    function eski() { return resource.data; }
     function shortStr(v, max) { return v is string && v.size() <= max; }
-
-    // =====================================================================
-    // Keleş Satış
-    // Firma verisini yalnızca üyeler görür. Saha çalışanları yalnızca
-    // kendi girdikleri ve aracı oldukları siparişleri görür ve değiştirir. Davet kodları
-    // yalnızca yöneticilerin okuyabildiği gizli/kodlar belgesindedir.
-    // =====================================================================
-    function satisFirmaYolu(fid) {
-      return /databases/$(database)/documents/satis_firmalar/$(fid);
-    }
-    function satisFirma(fid) { return get(satisFirmaYolu(fid)).data; }
-    function satisUye(fid) { return signedIn() && uid() in satisFirma(fid).uyeler; }
-    function satisYonetici(fid) { return signedIn() && uid() in satisFirma(fid).yoneticiler; }
-    function satisSaha(fid) { return signedIn() && uid() in satisFirma(fid).get('saha', []); }
-    function satisGizliSonra(fid) {
-      return getAfter(/databases/$(database)/documents/satis_firmalar/$(fid)/gizli/kodlar).data;
-    }
-    function satisKatilimKodu(fid) {
-      return getAfter(/databases/$(database)/documents/satis_firmalar/$(fid)/katilim/$(uid())).data.kod;
-    }
+    function fYol(fid) { return /databases/$(database)/documents/satis_firmalar/$(fid); }
+    function firma(fid) { return get(fYol(fid)).data; }
+    function uye(fid) { return signedIn() && uid() in firma(fid).uyeler; }
+    function yonetici(fid) { return signedIn() && uid() in firma(fid).yoneticiler; }
+    function saha(fid) { return signedIn() && uid() in firma(fid).get('saha', []); }
+    function gizli(fid) { return getAfter(/databases/$(database)/documents/satis_firmalar/$(fid)/gizli/kodlar).data; }
+    function katilimKodu(fid) { return getAfter(/databases/$(database)/documents/satis_firmalar/$(fid)/katilim/$(uid())).data.kod; }
+    function sadece(alanlar) { return yeni().diff(eski()).affectedKeys().hasOnly(alanlar); }
 
     match /satis_kullanicilar/{userId} {
       allow get: if signedIn();
-      allow list: if false;
       allow create, update: if signedIn() && uid() == userId
-        && (!('ad' in request.resource.data) || shortStr(request.resource.data.ad, 80))
-        && (!('firmaId' in request.resource.data) || shortStr(request.resource.data.firmaId, 64));
-      allow delete: if false;
+        && (!('ad' in yeni()) || shortStr(yeni().ad, 80))
+        && (!('firmaId' in yeni()) || shortStr(yeni().firmaId, 64));
     }
 
-    // Davet kodu → firma (tur: ekip | saha). Kodu bilen okur; yalnız o
-    // firmanın yöneticisi, gizli belgede kayıtlı olan kodu yazabilir.
     match /satis_kodlar/{kod} {
       allow get: if signedIn();
-      allow list: if false;
       allow create: if signedIn()
-        && uid() in getAfter(satisFirmaYolu(request.resource.data.firmaId)).data.yoneticiler
-        && (satisGizliSonra(request.resource.data.firmaId).get('kod', '') == kod
-            || satisGizliSonra(request.resource.data.firmaId).get('sahaKod', '') == kod);
-      allow delete: if signedIn() && satisYonetici(resource.data.firmaId);
-      allow update: if false;
+        && uid() in getAfter(fYol(yeni().firmaId)).data.yoneticiler
+        && (gizli(yeni().firmaId).get('kod', '') == kod || gizli(yeni().firmaId).get('sahaKod', '') == kod);
+      allow delete: if yonetici(eski().firmaId);
     }
 
     match /satis_firmalar/{fid} {
-      allow get: if signedIn()
-        && (uid() in resource.data.uyeler || uid() in resource.data.get('saha', []));
-      allow list: if false;
-      allow create: if signedIn()
-        && request.resource.data.sahip == uid()
-        && request.resource.data.uyeler == [uid()]
-        && request.resource.data.yoneticiler == [uid()]
-        && request.resource.data.get('saha', []) == []
-        && request.resource.data.sayac == 0
-        && !('kod' in request.resource.data)
-        && shortStr(request.resource.data.ad, 40);
+      allow get: if signedIn() && (uid() in eski().uyeler || uid() in eski().get('saha', []));
+      allow create: if signedIn() && yeni().sahip == uid()
+        && yeni().uyeler == [uid()] && yeni().yoneticiler == [uid()]
+        && yeni().get('saha', []) == [] && yeni().sayac == 0
+        && !('kod' in yeni()) && shortStr(yeni().ad, 40);
       allow update: if signedIn() && (
-        // Yönetici: ayarlar ve ekip. Sahip değişmez, sahip çıkarılamaz.
-        (uid() in resource.data.yoneticiler
-          && request.resource.data.sahip == resource.data.sahip
-          && resource.data.sahip in request.resource.data.uyeler
-          && resource.data.sahip in request.resource.data.yoneticiler
-          && request.resource.data.yoneticiler.hasOnly(request.resource.data.uyeler)
-          && request.resource.data.sayac >= resource.data.sayac
-          && !('kod' in request.resource.data)
-          && !('katilKod' in request.resource.data)
-          && shortStr(request.resource.data.ad, 40))
-        // Üye ya da saha çalışanı: yalnızca sipariş sayacını bir artırır.
-        || ((uid() in resource.data.uyeler || uid() in resource.data.get('saha', []))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sayac'])
-          && request.resource.data.sayac == resource.data.sayac + 1)
-        // Ekibe katılım: ekip davet koduyla yalnızca kendini ekler.
-        || (!(uid() in resource.data.uyeler)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uyeler'])
-          && request.resource.data.uyeler.toSet() == resource.data.uyeler.toSet().union([uid()].toSet())
-          && satisKatilimKodu(fid) == satisGizliSonra(fid).kod)
-        // Sahaya katılım: saha davet koduyla yalnızca kendini ekler.
-        || (!(uid() in resource.data.get('saha', []))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['saha'])
-          && request.resource.data.saha.toSet() == resource.data.get('saha', []).toSet().union([uid()].toSet())
-          && satisKatilimKodu(fid) == satisGizliSonra(fid).sahaKod)
-      );
-      allow delete: if signedIn() && uid() == resource.data.sahip;
+        (uid() in eski().yoneticiler && yeni().sahip == eski().sahip
+          && eski().sahip in yeni().uyeler && eski().sahip in yeni().yoneticiler
+          && yeni().yoneticiler.hasOnly(yeni().uyeler) && yeni().sayac >= eski().sayac
+          && !('kod' in yeni()) && !('katilKod' in yeni()) && shortStr(yeni().ad, 40))
+        || ((uid() in eski().uyeler || uid() in eski().get('saha', []))
+          && sadece(['sayac']) && yeni().sayac == eski().sayac + 1)
+        || (!(uid() in eski().uyeler) && sadece(['uyeler'])
+          && yeni().uyeler.toSet() == eski().uyeler.toSet().union([uid()].toSet())
+          && katilimKodu(fid) == gizli(fid).kod)
+        || (!(uid() in eski().get('saha', [])) && sadece(['saha'])
+          && yeni().saha.toSet() == eski().get('saha', []).toSet().union([uid()].toSet())
+          && katilimKodu(fid) == gizli(fid).sahaKod));
+      allow delete: if signedIn() && uid() == eski().sahip;
 
-      // Davet kodları: yalnızca yöneticiler okur ve yazar.
       match /gizli/{belge} {
-        allow read: if satisYonetici(fid);
-        allow write: if signedIn()
-          && uid() in getAfter(satisFirmaYolu(fid)).data.yoneticiler;
+        allow read: if yonetici(fid);
+        allow write: if signedIn() && uid() in getAfter(fYol(fid)).data.yoneticiler;
       }
 
-      // Katılırken girilen kod (kuralların kodu doğrulaması için).
       match /katilim/{userId} {
-        // DÜZELTME 5: Boş/kısa kodla katılım engellenir.
         allow create, update: if signedIn() && uid() == userId
-          && shortStr(request.resource.data.kod, 16)
-          && request.resource.data.kod.size() >= 6;
-        allow read: if satisYonetici(fid);
-        allow delete: if false;
+          && shortStr(yeni().kod, 16) && yeni().kod.size() >= 6;
+        allow read: if yonetici(fid);
       }
 
       match /siparisler/{sid} {
         function gecerli(d) {
           return shortStr(d.musteri, 80) && d.musteri.size() > 0
             && shortStr(d.urun, 60) && d.urun.size() > 0
-            && d.miktar is number && d.miktar > 0
-            && shortStr(d.birim, 16)
+            && d.miktar is number && d.miktar > 0 && shortStr(d.birim, 16)
             && (!('not' in d) || shortStr(d.not, 500))
             && (!('araci' in d) || shortStr(d.araci, 80))
             && (d.get('fiyat', null) == null || (d.fiyat is number && d.fiyat >= 0))
             && d.tahsilatlar is list && d.tahsilatlar.size() <= 200;
         }
-        // Saha çalışanı: kendi girdiği ya da aracı olarak bağlandığı
-        // (gorenler) satışlar. Bağlamayı yalnızca ekip üyeleri değiştirir.
-        allow read: if satisUye(fid)
-          || (satisSaha(fid)
-              && (resource.data.olusturan == uid() || uid() in resource.data.get('gorenler', [])));
-        allow create: if (satisUye(fid)
-            || (satisSaha(fid) && request.resource.data.get('gorenler', []) == []))
-          && request.resource.data.olusturan == uid()
-          && gecerli(request.resource.data);
-        allow update: if (satisUye(fid)
-            || (satisSaha(fid)
-                && (resource.data.olusturan == uid() || uid() in resource.data.get('gorenler', []))
-                && request.resource.data.get('gorenler', []) == resource.data.get('gorenler', [])))
-          && request.resource.data.olusturan == resource.data.olusturan
-          && request.resource.data.no == resource.data.no
-          && gecerli(request.resource.data);
-        allow delete: if satisYonetici(fid)
-          || (satisUye(fid) && resource.data.olusturan == uid());
+        function benim() { return eski().olusturan == uid() || uid() in eski().get('gorenler', []); }
+        allow read: if uye(fid) || (saha(fid) && benim());
+        allow create: if (uye(fid) || (saha(fid) && yeni().get('gorenler', []) == []))
+          && yeni().olusturan == uid() && gecerli(yeni());
+        allow update: if (uye(fid) || (saha(fid) && benim()
+            && yeni().get('gorenler', []) == eski().get('gorenler', [])))
+          && yeni().olusturan == eski().olusturan && yeni().no == eski().no
+          && gecerli(yeni());
+        allow delete: if yonetici(fid) || (uye(fid) && eski().olusturan == uid());
       }
 
-      // "Son hareketler" kaydı (firma altında tutuluyorsa).
-      // Kayıtlar sonradan değiştirilemez; ekip görür, ekip ve saha ekler.
       match /satis_hareketleri/{hid} {
-        allow read: if satisUye(fid);
-        allow create: if satisUye(fid) || satisSaha(fid);
-        allow update: if false;
-        allow delete: if satisYonetici(fid);
+        allow read: if uye(fid);
+        allow create: if uye(fid) || saha(fid);
+        allow delete: if yonetici(fid);
       }
     }
 
-    // "Son hareketler" en üst seviyede tutuluyorsa
-    // (belgede firmaId alanı olmalı). Hangisini kullanıyorsan diğerini silebilirsin.
     match /satis_hareketleri/{hid} {
-      allow read: if satisUye(resource.data.firmaId);
-      allow create: if satisUye(request.resource.data.firmaId)
-        || satisSaha(request.resource.data.firmaId);
-      allow update: if false;
-      allow delete: if satisYonetici(resource.data.firmaId);
+      allow read: if uye(eski().firmaId);
+      allow create: if uye(yeni().firmaId) || saha(yeni().firmaId);
+      allow delete: if yonetici(eski().firmaId);
     }
   }
 }
