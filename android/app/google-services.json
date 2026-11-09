@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "23261241650",
+    "project_id": "keles-satis",
+    "storage_bucket": "keles-satis.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:23261241650:android:1939b0cc94e89feaeb372b",
+        "android_client_info": {
+          "package_name": "com.kelestarim.keles_satis"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1rCK_lUftziSDt7zFTQ6P3ttXrkHJ1ZY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
