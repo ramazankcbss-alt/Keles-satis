@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keleş Satış - Yedek Al</title>
+<style>
+  :root { --mavi:#1d4ed8; --gri:#64748b; --kirmizi:#b91c1c; --yesil:#15803d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:#f1f5f9; color:#0f172a; }
+  main { max-width:440px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:22px; margin:8px 0 4px; }
+  p.alt { color:var(--gri); margin:0 0 20px; font-size:15px; line-height:1.4; }
+  .kart { background:#fff; border-radius:14px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:14px; }
+  label { display:block; font-size:14px; color:var(--gri); margin:10px 0 4px; }
+  input { width:100%; font-size:17px; padding:12px; border:1px solid #cbd5e1; border-radius:10px; }
+  button { width:100%; font-size:17px; padding:14px; border:0; border-radius:10px; background:var(--mavi); color:#fff; margin-top:14px; font-weight:600; }
+  button.ikincil { background:#e2e8f0; color:#0f172a; }
+  button:disabled { opacity:.5; }
+  #durum { font-size:15px; line-height:1.5; white-space:pre-line; }
+  .hata { color:var(--kirmizi); }
+  .tamam { color:var(--yesil); }
+  ul { padding-left:20px; margin:8px 0 0; }
+  li { margin:2px 0; }
+  .gizli { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Keleş Satış yedeği</h1>
+  <p class="alt">Uygulamadaki hesabınla giriş yap. Firmanın tüm verisi tek bir dosyaya alınır; sonra Google Drive'a kaydedersin. Bilgilerin yalnızca Firebase'e gider, başka bir yere gönderilmez.</p>
+
+  <div class="kart" id="girisKart">
+    <form id="giris">
+      <label for="eposta">E-posta</label>
+      <input id="eposta" type="email" autocomplete="username" required>
+      <label for="sifre">Şifre</label>
+      <input id="sifre" type="password" autocomplete="current-password" required>
+      <button id="girisBtn" type="submit">Giriş yap ve yedeği hazırla</button>
+    </form>
+  </div>
+
+  <div class="kart gizli" id="sonucKart">
+    <div id="durum"></div>
+    <button id="paylasBtn" class="gizli">Drive'a kaydet (Paylaş)</button>
+    <button id="indirBtn" class="ikincil gizli">Dosyayı indir</button>
+  </div>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, getDocs, query, where, Timestamp, GeoPoint, DocumentReference }
+  from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+// Keleş Satış'ın şu an kullandığı (eski) Firebase projesi.
+const app = initializeApp({
+  apiKey: "AIzaSyCc1S_Log_bfejrqZSF6btMyz1MeaPMUxs",
+  authDomain: "egitim-takip-5a833.firebaseapp.com",
+  projectId: "egitim-takip-5a833",
+  storageBucket: "egitim-takip-5a833.firebasestorage.app",
+  messagingSenderId: "346066162484",
+  appId: "1:346066162484:android:0da3d7f5313e9e336bcb61",
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $ = (id) => document.getElementById(id);
+let dosya = null;
+
+function yaz(metin, sinif = "") { $("durum").className = sinif; $("durum").textContent = metin; }
+
+function deger(v) {
+  if (v instanceof Timestamp) return v.toDate().toISOString();
+  if (v instanceof GeoPoint) return { lat: v.latitude, lng: v.longitude };
+  if (v instanceof DocumentReference) return v.path;
+  if (Array.isArray(v)) return v.map(deger);
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, e]) => [k, deger(e)]));
+  return v;
+}
+const belge = (d) => ({ id: d.id, ...deger(d.data() || {}) });
+
+async function koleksiyon(yol, q) {
+  try {
+    const s = await getDocs(q || collection(db, yol));
+    return { kayitlar: s.docs.map(belge) };
+  } catch (e) {
+    return { kayitlar: [], hata: e.code || String(e) };
+  }
+}
+
+function hataMetni(e) {
+  const k = e.code || "";
+  if (k.includes("invalid-credential") || k.includes("wrong-password") || k.includes("user-not-found"))
+    return "E-posta ya da şifre hatalı.";
+  if (k.includes("too-many-requests")) return "Çok fazla deneme yapıldı. Biraz bekleyip tekrar deneyin.";
+  if (k.includes("api-key") || k.includes("unauthorized-domain") || k.includes("requests-from-referer"))
+    return "Firebase bu sayfadan girişe izin vermedi (" + k + "). Claude'a bu hatayı yazın.";
+  if (k.includes("network")) return "İnternet bağlantısı yok gibi görünüyor.";
+  return "Hata: " + (k || e.message || e);
+}
+
+$("giris").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  $("girisBtn").disabled = true;
+  $("sonucKart").classList.remove("gizli");
+  $("paylasBtn").classList.add("gizli");
+  $("indirBtn").classList.add("gizli");
+  yaz("Giriş yapılıyor…");
+  try {
+    const { user } = await signInWithEmailAndPassword(auth, $("eposta").value.trim(), $("sifre").value);
+    yaz("Kullanıcı bilgisi okunuyor…");
+    const kul = await getDoc(doc(db, "satis_kullanicilar", user.uid));
+    const firmaId = kul.data()?.firmaId;
+    if (!firmaId) throw { code: "firma-yok", message: "Bu hesap bir firmaya bağlı görünmüyor." };
+
+    yaz("Firma okunuyor…");
+    const firmaSnap = await getDoc(doc(db, "satis_firmalar", firmaId));
+    const firma = belge(firmaSnap);
+    const fy = `satis_firmalar/${firmaId}`;
+
+    yaz("Siparişler okunuyor…");
+    const siparisler = await koleksiyon(`${fy}/siparisler`);
+    yaz(`Siparişler okundu (${siparisler.kayitlar.length}). Hareketler okunuyor…`);
+    const hareketAlt = await koleksiyon(`${fy}/satis_hareketleri`);
+    const hareketUst = await koleksiyon("satis_hareketleri",
+      query(collection(db, "satis_hareketleri"), where("firmaId", "==", firmaId)));
+    const gizli = await koleksiyon(`${fy}/gizli`);
+    const katilim = await koleksiyon(`${fy}/katilim`);
+
+    const uyeIdleri = [...new Set([...(firma.uyeler || []), ...(firma.saha || [])])];
+    const kullanicilar = [];
+    for (const id of uyeIdleri) {
+      try { const d = await getDoc(doc(db, "satis_kullanicilar", id)); if (d.exists()) kullanicilar.push(belge(d)); } catch (_) {}
+    }
+
+    const veri = {
+      uygulama: "Keleş Satış",
+      kaynakProje: "egitim-takip-5a833",
+      tarih: new Date().toISOString(),
+      yedekleyen: { uid: user.uid, eposta: user.email },
+      firma,
+      kullanicilar,
+      siparisler: siparisler.kayitlar,
+      hareketler: [...hareketAlt.kayitlar, ...hareketUst.kayitlar],
+      gizli: gizli.kayitlar,
+      katilim: katilim.kayitlar,
+      okunamayanlar: Object.fromEntries(Object.entries({ siparisler, hareketAlt, hareketUst, gizli, katilim })
+        .filter(([, v]) => v.hata).map(([k, v]) => [k, v.hata])),
+    };
+
+    const t = new Date(), iki = (n) => String(n).padStart(2, "0");
+    const ad = `keles-satis-yedek-${t.getFullYear()}-${iki(t.getMonth() + 1)}-${iki(t.getDate())}-${iki(t.getHours())}${iki(t.getMinutes())}.json`;
+    dosya = new File([JSON.stringify(veri, null, 2)], ad, { type: "application/json" });
+
+    const eksik = Object.keys(veri.okunamayanlar).filter((k) => k !== "hareketUst" && k !== "hareketAlt");
+    let ozet = `Yedek hazır ✓\n\nFirma: ${firma.ad || firmaId}\nSipariş: ${veri.siparisler.length}\nHareket: ${veri.hareketler.length}\nKişi: ${kullanicilar.length}\nDosya: ${ad}`;
+    if (eksik.length) ozet += `\n\nNot: ${eksik.join(", ")} okunamadı (bu bölümleri yalnızca yöneticiler okuyabilir).`;
+    ozet += `\n\n"Drive'a kaydet"e bas, açılan listeden Drive'ı seç.`;
+    yaz(ozet, "tamam");
+    $("paylasBtn").classList.toggle("gizli", !(navigator.canShare && navigator.canShare({ files: [dosya] })));
+    $("indirBtn").classList.remove("gizli");
+  } catch (e) {
+    yaz(e.code === "firma-yok" ? e.message : hataMetni(e), "hata");
+  } finally {
+    $("girisBtn").disabled = false;
+    $("sifre").value = "";
+  }
+});
+
+$("paylasBtn").addEventListener("click", async () => {
+  try { await navigator.share({ files: [dosya], title: "Keleş Satış yedeği" }); }
+  catch (e) { if (e.name !== "AbortError") yaz("Paylaşım açılamadı. 'Dosyayı indir'e basıp Drive uygulamasından yükleyin.", "hata"); }
+});
+
+$("indirBtn").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(dosya);
+  a.download = dosya.name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+});
+</script>
+</body>
+</html>
