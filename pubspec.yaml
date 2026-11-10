@@ -1,0 +1,30 @@
+name: keles_satis
+description: "Keleş Tarım satış takibi: sipariş, fiyat, teslim ve tahsilat."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  intl: any
+  http: ^1.2.0
+  ota_update: ^7.1.0
+  flutter_local_notifications: ^22.3.0
+  shared_preferences: ^2.3.0
+  workmanager: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
