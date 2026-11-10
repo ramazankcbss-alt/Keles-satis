@@ -9,12 +9,12 @@ jobs:
   kontrol:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+      - name: Flutter kur
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
 
       - name: Paketler
         run: flutter pub upgrade --major-versions firebase_core firebase_auth cloud_firestore flutter_lints
