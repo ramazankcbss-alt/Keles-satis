@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../bicim.dart';
-import '../modeller.dart';
 import '../servis/veri.dart';
 import '../tema.dart';
 import 'formlar.dart';
