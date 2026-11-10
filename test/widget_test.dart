@@ -25,7 +25,7 @@ Siparis _s({double? fiyat, bool teslim = false, List<double> odemeler = const []
 void main() {
   test('Aracı sıralaması kilo ve sipariş sayısına göre hesaplanır', () {
     Siparis s(String araci, double miktar, String birim, int t) => Siparis(
-        id: '\$araci\$t',
+        id: '$araci$t',
         no: t,
         musteri: 'M',
         urun: 'Çekirdek',
@@ -44,7 +44,7 @@ void main() {
       s('', 10, 'adet', buAy),
     ], simdi);
     expect(o.ay, '2026-11');
-    expect(o.tum.first.ad, 'ali'.isEmpty ? '' : o.tum.first.ad);
+    expect(o.tum.first.ad, 'Ali');
     expect(o.tum.first.kg, 1035);
     expect(o.tum.first.siparis, 2);
     expect(o.buAy.first.ad, 'Veli');
