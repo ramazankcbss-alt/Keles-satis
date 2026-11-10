@@ -364,7 +364,33 @@ class Durum extends ChangeNotifier {
   void _eslestirmeyiZamanla() {
     if (!yonetici) return;
     _eslestirmeZamani?.cancel();
-    _eslestirmeZamani = Timer(const Duration(seconds: 3), _sahaEslestir);
+    _eslestirmeZamani = Timer(const Duration(seconds: 3), () {
+      _sahaEslestir();
+      _araciOzetiYaz();
+    });
+  }
+
+  bool _ozetYaziliyor = false;
+
+  /// Saha çalışanları için aracı sıralamasını firma kaydına yazar. Saha
+  /// çalışanı başkalarının siparişlerini okuyamaz; yalnızca bu özeti görür
+  /// (aracı adı, kilogram ve sipariş sayısı; tutar yok). Değişmediyse yazmaz.
+  Future<void> _araciOzetiYaz() async {
+    final f = firma;
+    if (f == null || !yonetici || !yuklendi || _kapandi || _ozetYaziliyor) return;
+    if (f.saha.isEmpty) return;
+    final o = AraciOzeti.hesapla(siparisler, DateTime.now());
+    if (f.araciOzeti?.imza == o.imza) return;
+    _ozetYaziliyor = true;
+    try {
+      await Veri.firmalar
+          .doc(fid)
+          .update({'araciOzet': o.toMap(DateTime.now().millisecondsSinceEpoch)});
+    } catch (e) {
+      debugPrint('Aracı özeti yazılamadı: $e');
+    } finally {
+      _ozetYaziliyor = false;
+    }
   }
 
   /// Bir siparişin aracısı hangi saha çalışanlarına ait?

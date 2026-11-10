@@ -23,7 +23,9 @@ class SahaKabuk extends StatefulWidget {
 }
 
 class _SahaKabukState extends State<SahaKabuk> {
-  bool _sadeceBekleyen = true;
+  /// 0: bekleyen, 1: tümü, 2: müşterilere göre
+  int _gorunum = 0;
+  bool _buAy = true;
 
   @override
   void initState() {
@@ -89,10 +91,18 @@ class _SahaKabukState extends State<SahaKabuk> {
                 s.tahsilatlar
                     .where((t) => t.tarih >= gun && t.by == d.uid)
                     .fold(0.0, (b, t) => b + t.tutar));
-        final liste = _sadeceBekleyen
-            ? d.siparisler.where(_bekliyor).toList()
-            : d.siparisler;
-        final bekleyenSayisi = d.siparisler.where(_bekliyor).length;
+        final bekleyenler = d.siparisler.where(_bekliyor).toList();
+        final liste = _gorunum == 0 ? bekleyenler : d.siparisler;
+        final bekleyenSayisi = bekleyenler.length;
+
+        // Toplamlarım (kendi girdiğim ve aracı olduğum satışlar)
+        final toplamKg =
+            d.siparisler.fold(0.0, (a, s) => a + AraciOzeti.kgKarsiligi(s));
+        final toplamTutar = d.siparisler.fold(0.0, (a, s) => a + s.toplam);
+        final musteriler = <String, List<Siparis>>{};
+        for (final s in d.siparisler) {
+          musteriler.putIfAbsent(musteriAnahtari(s.musteri), () => []).add(s);
+        }
 
         return Scaffold(
           appBar: AppBar(
@@ -165,28 +175,62 @@ class _SahaKabukState extends State<SahaKabuk> {
                       yazi: 'Saha', renk: Renk.anaKoyu, zemin: Renk.anaAcik),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Hap(
+                        emoji: '⚖️',
+                        deger: '${sayi(toplamKg)} kg',
+                        etiket: 'Toplam miktarım',
+                        renk: Renk.anaKoyu,
+                        zemin: Renk.anaAcik),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Hap(
+                        emoji: '💰',
+                        deger: tl0(toplamTutar),
+                        etiket: '${musteriler.length} müşteri',
+                        renk: Renk.mavi,
+                        zemin: Renk.maviAcik),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Hap(
+                        emoji: '🛒',
+                        deger: tl0(bugunSatis),
+                        etiket: 'Bugün ${bugunku.length} satış',
+                        renk: Renk.amber,
+                        zemin: Renk.amberAcik),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Hap(
+                        emoji: '📥',
+                        deger: tl0(bugunTahsil),
+                        etiket: 'Bugün tahsil',
+                        renk: Renk.yesil,
+                        zemin: Renk.yesilAcik),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               Buton(
                 yazi: 'Yeni Satış',
                 ikon: Icons.add_shopping_cart,
                 yukseklik: 58,
                 onTap: () => yeniSiparis(context, d, hizli: true),
               ),
-              const SizedBox(height: 14),
-              Panel(
-                child: Row(
-                  children: [
-                    Expanded(
-                        child: Cip(
-                            ust: 'Bugün satış', deger: '${bugunku.length} adet')),
-                    Expanded(child: Cip(ust: 'Bugün tutar', deger: tl0(bugunSatis))),
-                    Expanded(
-                        child: Cip(
-                            ust: 'Bugün tahsil',
-                            deger: tl0(bugunTahsil),
-                            durum: bugunTahsil > 0 ? true : null)),
-                  ],
-                ),
+              const SizedBox(height: 12),
+              _Siralama(
+                durum: d,
+                buAy: _buAy,
+                degistir: (v) => setState(() => _buAy = v),
               ),
               Row(
                 children: [
@@ -197,19 +241,18 @@ class _SahaKabukState extends State<SahaKabuk> {
                             fontWeight: FontWeight.w600,
                             color: Renk.yazi)),
                   ),
-                  SegmentedButton<bool>(
+                  SegmentedButton<int>(
                     showSelectedIcon: false,
                     style: const ButtonStyle(
                         visualDensity: VisualDensity.compact,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                     segments: [
-                      ButtonSegment(
-                          value: true, label: Text('Bekleyen ($bekleyenSayisi)')),
-                      const ButtonSegment(value: false, label: Text('Tümü')),
+                      ButtonSegment(value: 0, label: Text('Bekleyen ($bekleyenSayisi)')),
+                      const ButtonSegment(value: 1, label: Text('Tümü')),
+                      const ButtonSegment(value: 2, label: Text('Kime')),
                     ],
-                    selected: {_sadeceBekleyen},
-                    onSelectionChanged: (v) =>
-                        setState(() => _sadeceBekleyen = v.first),
+                    selected: {_gorunum},
+                    onSelectionChanged: (v) => setState(() => _gorunum = v.first),
                   ),
                 ],
               ),
@@ -223,15 +266,178 @@ class _SahaKabukState extends State<SahaKabuk> {
               else if (liste.isEmpty)
                 BosDurum(
                     ikon: Icons.receipt_long_outlined,
-                    yazi: _sadeceBekleyen
+                    yazi: _gorunum == 0
                         ? 'Teslim ya da tahsilat bekleyen satışınız yok.'
                         : 'Henüz satış girmediniz.\n"Yeni Satış" ile başlayın.')
+              else if (_gorunum == 2)
+                for (final m in musteriler.values)
+                  Panel(
+                    padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: MusteriHareketKarti(
+                        durum: d, siparisler: m, gosterilecek: 50),
+                  )
               else
                 for (final s in liste) SiparisKarti(durum: d, s: s),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Aracıların satış sıralaması: kim kaç kilo sattı, payı yüzde kaç.
+/// Tutarlar gösterilmez; özet yöneticinin uygulaması tarafından yazılır.
+class _Siralama extends StatelessWidget {
+  const _Siralama(
+      {required this.durum, required this.buAy, required this.degistir});
+  final Durum durum;
+  final bool buAy;
+  final ValueChanged<bool> degistir;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = durum;
+    final f = d.firma!;
+    final o = f.araciOzeti;
+    final buAyGecerli = o != null && o.ay == AraciOzeti.ayAnahtari(DateTime.now());
+    final satirlar = o == null
+        ? const <AraciSatir>[]
+        : (buAy ? (buAyGecerli ? o.buAy : const <AraciSatir>[]) : o.tum);
+    final toplamKg = satirlar.fold(0.0, (a, x) => a + x.kg);
+    final toplamN = satirlar.fold(0, (a, x) => a + x.siparis);
+    double pay(AraciSatir x) => toplamKg > 0
+        ? x.kg / toplamKg
+        : (toplamN > 0 ? x.siparis / toplamN : 0);
+    final benim = <String>{
+      araMetni(d.isim(d.uid)),
+      for (final a in f.sahaAraci[d.uid] ?? const <String>[]) araMetni(a),
+    }..removeWhere((e) => e.isEmpty || e == '…');
+    const madalya = ['🥇', '🥈', '🥉'];
+
+    return Panel(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Text('🏆 ', style: TextStyle(fontSize: 18)),
+              const Expanded(
+                child: Text('Aracı sıralaması',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Renk.yazi)),
+              ),
+              SegmentedButton<bool>(
+                showSelectedIcon: false,
+                style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                segments: const [
+                  ButtonSegment(value: true, label: Text('Bu ay')),
+                  ButtonSegment(value: false, label: Text('Tümü')),
+                ],
+                selected: {buAy},
+                onSelectionChanged: (v) => degistir(v.first),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (satirlar.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                  o == null
+                      ? 'Sıralama, yönetici uygulamayı açtığında hazırlanır.'
+                      : 'Bu ay henüz satış yok.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Renk.soluk, fontSize: 13.5)),
+            )
+          else
+            for (var i = 0; i < satirlar.length; i++)
+              Builder(builder: (context) {
+                final x = satirlar[i];
+                final ben = benim.contains(araMetni(x.ad));
+                final p = pay(x);
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.fromLTRB(8, 6, 10, 7),
+                  decoration: BoxDecoration(
+                    color: ben ? Renk.amberAcik : const Color(0xFFF8FAFB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: ben ? const Color(0xFFFCD34D) : Renk.cizgi,
+                        width: ben ? 2 : 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 30,
+                            child: Text(i < 3 ? madalya[i] : '${i + 1}.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontSize: i < 3 ? 18 : 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Renk.soluk)),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(ben ? '${x.ad} (siz)' : x.ad,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight:
+                                        ben ? FontWeight.w800 : FontWeight.w600,
+                                    color: Renk.yazi)),
+                          ),
+                          Text(
+                              '${sayi(x.kg)} kg · %${(p * 100).toStringAsFixed(p < .1 ? 1 : 0)}',
+                              style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Renk.yazi)),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 34),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: LinearProgressIndicator(
+                                  value: p.clamp(0.0, 1.0).toDouble(),
+                                  minHeight: 7,
+                                  backgroundColor: const Color(0xFFE8EEF1),
+                                  color: ben ? Renk.amber : Renk.ana,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('${x.siparis} satış',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Renk.soluk)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          if (o != null && o.tarih > 0)
+            Text('Güncellendi: ${once(o.tarih)}',
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontSize: 11.5, color: Renk.soluk)),
+        ],
+      ),
     );
   }
 }

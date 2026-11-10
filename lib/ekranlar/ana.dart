@@ -203,65 +203,6 @@ class _AnaKabukState extends State<AnaKabuk> {
   }
 }
 
-class _OzetKart extends StatelessWidget {
-  const _OzetKart({
-    required this.ikon,
-    required this.etiket,
-    required this.deger,
-    required this.renk,
-    required this.zemin,
-  });
-  final IconData ikon;
-  final String etiket;
-  final String deger;
-  final Color renk;
-  final Color zemin;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          color: Renk.kart,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Renk.cizgi),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                  color: zemin, borderRadius: BorderRadius.circular(10)),
-              child: Icon(ikon, color: renk, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(etiket,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12.5, color: Renk.soluk)),
-                  const SizedBox(height: 2),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(deger,
-                        style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: Renk.yazi)),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-}
-
 class _AnaSayfa extends StatelessWidget {
   const _AnaSayfa(
       {required this.durum, required this.git, required this.sekmeyeGit});
@@ -294,47 +235,10 @@ class _AnaSayfa extends StatelessWidget {
     }
     final musteriler = gruplar.values.toList();
 
-    Widget kisayol(IconData ikon, String yazi, Color renk, Color zemin,
-            VoidCallback onTap) =>
-        Expanded(
-          child: Material(
-            color: Renk.kart,
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Renk.cizgi),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                          color: zemin, borderRadius: BorderRadius.circular(9)),
-                      child: Icon(ikon, color: renk, size: 18),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(yazi,
-                        maxLines: 2,
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            height: 1.15,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                            color: Renk.yazi)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
+    final musteriSayisi =
+        {for (final s in d.siparisler) musteriAnahtari(s.musteri)}.length;
+    final urunSayisi =
+        {for (final s in d.siparisler) s.urun.trim().toLowerCase()}.length;
 
     Widget tumSiparisler() => SiparisListesiEkrani(
         durum: d,
@@ -376,23 +280,23 @@ class _AnaSayfa extends StatelessWidget {
         ),
         const SizedBox(height: 10),
 
-        // Özet kartları (2 x 2)
+        // Özet hapları (2 x 2)
         Row(
           children: [
             Expanded(
-              child: _OzetKart(
-                  ikon: Icons.trending_up,
-                  etiket: 'Toplam satış',
+              child: Hap(
+                  emoji: '💰',
                   deger: tl0(ciro),
+                  etiket: 'Toplam satış',
                   renk: Renk.anaKoyu,
                   zemin: Renk.anaAcik),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: _OzetKart(
-                  ikon: Icons.account_balance_wallet_outlined,
-                  etiket: 'Tahsil edilen · %${(oran * 100).round()}',
+              child: Hap(
+                  emoji: '📥',
                   deger: tl0(tah),
+                  etiket: 'Tahsil · %${(oran * 100).round()}',
                   renk: Renk.yesil,
                   zemin: Renk.yesilAcik),
             ),
@@ -402,21 +306,23 @@ class _AnaSayfa extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _OzetKart(
-                  ikon: Icons.schedule,
-                  etiket: 'Kalan alacak',
+              child: Hap(
+                  emoji: '⏳',
                   deger: tl0(d.alacak),
+                  etiket: 'Kalan alacak',
                   renk: Renk.turuncu,
-                  zemin: Renk.turuncuAcik),
+                  zemin: Renk.turuncuAcik,
+                  onTap: () => sekmeyeGit(3)),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: _OzetKart(
-                  ikon: Icons.receipt_long_outlined,
-                  etiket: 'Sipariş',
+              child: Hap(
+                  emoji: '🧾',
                   deger: sayi(d.siparisler.length),
+                  etiket: 'Sipariş',
                   renk: Renk.mavi,
-                  zemin: Renk.maviAcik),
+                  zemin: Renk.maviAcik,
+                  onTap: () => git(tumSiparisler())),
             ),
           ],
         ),
@@ -425,28 +331,52 @@ class _AnaSayfa extends StatelessWidget {
         // Kısayollar (fiyat, teslim, tahsilat ve aracılar alttaki sekmelerde)
         Row(
           children: [
-            kisayol(
-                Icons.check_circle_outline,
-                'Tamamlanan\n${d.sayi(Asama.tamam)}',
-                Renk.yesil,
-                Renk.yesilAcik,
-                () => git(SiparisListesiEkrani(
-                    durum: d,
-                    baslik: 'Tamamlanan siparişler',
-                    filtre: (s) => s.asama == Asama.tamam,
-                    bosIkon: Icons.check_circle_outline,
-                    bosYazi: 'Henüz tamamlanan sipariş yok.',
-                    ozet: (l) =>
-                        'Tahsil edilen ${tl(l.fold(0.0, (a, s) => a + s.odenen))}'))),
+            Expanded(
+              child: RenkliKutu(
+                  ust: '${d.sayi(Asama.tamam)} sipariş',
+                  emoji: '✅',
+                  baslik: 'Tamamlanan',
+                  renk: Renk.yesil,
+                  zemin: const Color(0xFFF0FDF4),
+                  onTap: () => git(SiparisListesiEkrani(
+                      durum: d,
+                      baslik: 'Tamamlanan siparişler',
+                      filtre: (s) => s.asama == Asama.tamam,
+                      bosIkon: Icons.check_circle_outline,
+                      bosYazi: 'Henüz tamamlanan sipariş yok.',
+                      ozet: (l) =>
+                          'Tahsil edilen ${tl(l.fold(0.0, (a, s) => a + s.odenen))}'))),
+            ),
             const SizedBox(width: 8),
-            kisayol(Icons.list_alt, 'Tüm\nsiparişler', Renk.soluk,
-                const Color(0xFFEFF3F5), () => git(tumSiparisler())),
+            Expanded(
+              child: RenkliKutu(
+                  ust: '${sayi(d.siparisler.length)} kayıt',
+                  emoji: '📋',
+                  baslik: 'Tüm siparişler',
+                  renk: Renk.amber,
+                  zemin: const Color(0xFFFFFBEB),
+                  onTap: () => git(tumSiparisler())),
+            ),
             const SizedBox(width: 8),
-            kisayol(Icons.people_outline, 'Müşteri\nbakiyeleri', Renk.anaKoyu,
-                Renk.anaAcik, () => git(OzetEkrani(durum: d, musteri: true))),
+            Expanded(
+              child: RenkliKutu(
+                  ust: '$musteriSayisi kişi',
+                  emoji: '👥',
+                  baslik: 'Müşteri bakiyeleri',
+                  renk: Renk.anaKoyu,
+                  zemin: const Color(0xFFF0FDFA),
+                  onTap: () => git(OzetEkrani(durum: d, musteri: true))),
+            ),
             const SizedBox(width: 8),
-            kisayol(Icons.inventory_2_outlined, 'Ürün\nsatışları', Renk.mavi,
-                Renk.maviAcik, () => git(OzetEkrani(durum: d, musteri: false))),
+            Expanded(
+              child: RenkliKutu(
+                  ust: '$urunSayisi ürün',
+                  emoji: '📦',
+                  baslik: 'Ürün satışları',
+                  renk: Renk.mavi,
+                  zemin: const Color(0xFFEFF6FF),
+                  onTap: () => git(OzetEkrani(durum: d, musteri: false))),
+            ),
           ],
         ),
         const SizedBox(height: 10),
@@ -456,8 +386,8 @@ class _AnaSayfa extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: Renk.kart,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Renk.cizgi),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Renk.cizgi, width: 2),
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(
@@ -467,6 +397,7 @@ class _AnaSayfa extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 6, 6, 0),
                   child: Row(
                     children: [
+                      const Text('🕒 ', style: TextStyle(fontSize: 18)),
                       const Expanded(
                         child: Text('Son hareketler',
                             style: TextStyle(
@@ -508,7 +439,7 @@ class _AnaSayfa extends StatelessWidget {
 
     // Tek sayfa: kaydırma gerekmez. Çok kısa ekranlarda sayfa bütün olarak kayar.
     return LayoutBuilder(builder: (context, c) {
-      const enAz = 600.0;
+      const enAz = 640.0;
       final icerik = Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 8), child: sayfa);
       if (c.maxHeight >= enAz) return icerik;
