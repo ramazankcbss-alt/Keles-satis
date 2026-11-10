@@ -30,6 +30,8 @@ class _Grup {
   double tutar = 0;
   double miktar = 0; // ortak birime çevrilmiş
   double deger = 0; // seçili ölçüye göre
+  double odenen = 0, kalan = 0;
+  final List<Siparis> siparisler = [];
 }
 
 enum _Donem { tumu, buAy, son3Ay, buYil }
@@ -109,6 +111,9 @@ class _AraciPaneliState extends State<AraciPaneli> {
           final g = gruplar.putIfAbsent(k, () => _Grup(s.araciAdi));
           g.adet++;
           g.tutar += s.toplam;
+          g.odenen += s.odenen;
+          g.kalan += s.kalan;
+          g.siparisler.add(s);
           if (ortak != null) g.miktar += ortak.$2(s);
         }
         for (final g in gruplar.values) {
@@ -119,8 +124,7 @@ class _AraciPaneliState extends State<AraciPaneli> {
         final toplamDeger = satirlar.fold(0.0, (a, g) => a + g.deger);
         final toplamTutar = satirlar.fold(0.0, (a, g) => a + g.tutar);
         final toplamMiktar = satirlar.fold(0.0, (a, g) => a + g.miktar);
-        final araciSayisi =
-            satirlar.where((g) => g.ad != dogrudanSatis).length;
+        final toplamKalan = satirlar.fold(0.0, (a, g) => a + g.kalan);
 
         Color renk(int i) => i < _renkler.length ? _renkler[i] : _digerRengi;
 
@@ -199,7 +203,8 @@ class _AraciPaneliState extends State<AraciPaneli> {
                   const SizedBox(width: 8),
                   Expanded(child: _Kpi(etiket: 'Toplam tutar', deger: tl0(toplamTutar))),
                   const SizedBox(width: 8),
-                  Expanded(child: _Kpi(etiket: 'Aracı sayısı', deger: '$araciSayisi')),
+                  Expanded(
+                      child: _Kpi(etiket: 'Toplam alacak', deger: tl0(toplamKalan))),
                 ],
               ),
               const SizedBox(height: 12),
@@ -294,63 +299,38 @@ class _AraciPaneliState extends State<AraciPaneli> {
                 ),
               ),
 
-              // Tablo
-              Panel(
-                baslik: 'Aracı tablosu',
-                padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
-                child: Table(
-                  columnWidths: const {
-                    0: FlexColumnWidth(3.2),
-                    1: FlexColumnWidth(2.6),
-                    2: FlexColumnWidth(2.6),
-                    3: FlexColumnWidth(1.9),
-                  },
-                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  children: [
-                    _baslikSatiri(ortak == null ? 'Sipariş' : 'Miktar (${ortak.$1})'),
-                    for (var i = 0; i < satirlar.length; i++)
-                      _veriSatiri(
-                        context,
-                        renk: renk(i),
-                        ad: satirlar[i].ad,
-                        alt: '${satirlar[i].adet} sipariş',
-                        miktar: ortak == null
-                            ? sayi(satirlar[i].adet)
-                            : sayi(satirlar[i].miktar.round()),
-                        tutar: tl0(satirlar[i].tutar),
-                        oran: toplamDeger > 0 ? satirlar[i].deger / toplamDeger : 0,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SiparisListesiEkrani(
-                              durum: d,
-                              baslik: satirlar[i].ad,
-                              filtre: (s) =>
-                                  s.araciAdi.toLowerCase() ==
-                                      satirlar[i].ad.toLowerCase() &&
-                                  s.olusturma >= bas &&
-                                  (_urun.isEmpty ||
-                                      s.urun.trim().toLowerCase() == _urun),
-                              asamaSecimi: true,
-                              bosIkon: Icons.list_alt,
-                              bosYazi: 'Kayıt yok.',
-                            ),
-                          ),
-                        ),
+              // Aracı kartları: satış, tahsil, alacak ve ürün ürün alacak
+              for (var i = 0; i < satirlar.length; i++)
+                _AraciKarti(
+                  g: satirlar[i],
+                  renk: renk(i),
+                  oran: toplamDeger > 0 ? satirlar[i].deger / toplamDeger : 0,
+                  miktar: ortak == null
+                      ? '${satirlar[i].adet} sipariş'
+                      : '${sayi(satirlar[i].miktar.round())} ${ortak.$1}',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SiparisListesiEkrani(
+                        durum: d,
+                        baslik: satirlar[i].ad,
+                        filtre: (s) =>
+                            s.araciAdi.toLowerCase() ==
+                                satirlar[i].ad.toLowerCase() &&
+                            s.olusturma >= bas &&
+                            (_urun.isEmpty ||
+                                s.urun.trim().toLowerCase() == _urun),
+                        asamaSecimi: true,
+                        bosIkon: Icons.list_alt,
+                        bosYazi: 'Kayıt yok.',
                       ),
-                    _toplamSatiri(
-                      miktar: ortak == null
-                          ? sayi(liste.length)
-                          : sayi(toplamMiktar.round()),
-                      tutar: tl0(toplamTutar),
                     ),
-                  ],
+                  ),
                 ),
-              ),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
-                  'Pay sütunu üstteki seçime (miktar ya da ₺) göre hesaplanır. Satıra dokunursanız o aracının siparişleri açılır. Aracısı girilmemiş siparişler "Doğrudan satış" olarak sayılır; aracıyı sipariş detayından ekleyebilirsiniz.',
+                  'Pay üstteki seçime (miktar ya da ₺) göre hesaplanır. Alacak, o aracının satışlarında henüz tahsil edilmemiş tutardır. Aracının adına dokunursanız siparişleri açılır. Aracısı girilmemiş siparişler "Doğrudan satış" olarak sayılır; aracıyı sipariş detayından ekleyebilirsiniz.',
                   style: TextStyle(fontSize: 12.5, color: Renk.soluk),
                 ),
               ),
@@ -360,132 +340,127 @@ class _AraciPaneliState extends State<AraciPaneli> {
       },
     );
   }
+}
 
-  static const _hucre = EdgeInsets.symmetric(horizontal: 4, vertical: 10);
+/// Bir aracının satışı, tahsil edileni, alacağı ve ürün ürün dökümü.
+class _AraciKarti extends StatelessWidget {
+  const _AraciKarti({
+    required this.g,
+    required this.renk,
+    required this.oran,
+    required this.miktar,
+    required this.onTap,
+  });
+  final _Grup g;
+  final Color renk;
+  final double oran;
+  final String miktar;
+  final VoidCallback onTap;
 
-  TableRow _baslikSatiri(String miktarBasligi) {
-    Widget h(String y, {TextAlign a = TextAlign.right}) => Padding(
-          padding: _hucre,
-          child: Text(y,
-              textAlign: a,
-              style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600, color: Renk.soluk)),
+  @override
+  Widget build(BuildContext context) {
+    Widget kutu(String etiket, String deger, Color r, Color z) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            decoration: BoxDecoration(
+                color: z, borderRadius: BorderRadius.circular(10)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(etiket,
+                    style: TextStyle(
+                        fontSize: 11.5, fontWeight: FontWeight.w600, color: r)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(deger,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Renk.yazi)),
+                ),
+              ],
+            ),
+          ),
         );
-    return TableRow(
-      decoration: const BoxDecoration(
-          color: Color(0xFFF3F6F7),
-          borderRadius: BorderRadius.all(Radius.circular(8))),
-      children: [
-        h('Aracı', a: TextAlign.left),
-        h(miktarBasligi),
-        h('Tutar'),
-        h('Pay'),
-      ],
-    );
-  }
-
-  TableRow _veriSatiri(
-    BuildContext context, {
-    required Color renk,
-    required String ad,
-    required String alt,
-    required String miktar,
-    required String tutar,
-    required double oran,
-    required VoidCallback onTap,
-  }) {
-    Widget dokun(Widget w) => InkWell(onTap: onTap, child: w);
-    const sayiStili = TextStyle(fontSize: 13.5, color: Renk.yazi);
-    return TableRow(
-      decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Renk.cizgi))),
-      children: [
-        dokun(Padding(
-          padding: _hucre,
-          child: Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                    color: renk, borderRadius: BorderRadius.circular(3)),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(ad,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+    return Panel(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                        color: renk, borderRadius: BorderRadius.circular(4)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(g.ad,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Renk.yazi)),
+                        Text('$miktar · ${g.adet} sipariş',
+                            style: const TextStyle(
+                                fontSize: 12.5, color: Renk.soluk)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                        color: Renk.anaAcik,
+                        borderRadius: BorderRadius.circular(8)),
+                    child: Text(yuzdeYaz(oran),
                         style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Renk.yazi)),
-                    Text(alt,
-                        style: const TextStyle(fontSize: 11.5, color: Renk.soluk)),
-                  ],
-                ),
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: Renk.anaKoyu)),
+                  ),
+                  const Icon(Icons.chevron_right, color: Renk.soluk),
+                ],
               ),
-            ],
+            ),
           ),
-        )),
-        dokun(Padding(
-            padding: _hucre,
-            child: FittedBox(
-                alignment: Alignment.centerRight,
-                fit: BoxFit.scaleDown,
-                child: Text(miktar, style: sayiStili)))),
-        dokun(Padding(
-            padding: _hucre,
-            child: FittedBox(
-                alignment: Alignment.centerRight,
-                fit: BoxFit.scaleDown,
-                child: Text(tutar, style: sayiStili)))),
-        dokun(Padding(
-          padding: _hucre,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: oran.clamp(0.0, 1.0),
+              minHeight: 6,
+              color: renk,
+              backgroundColor: const Color(0xFFE8EEF1),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
             children: [
-              Text(yuzdeYaz(oran),
-                  style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: Renk.anaKoyu)),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: oran.clamp(0.0, 1.0),
-                  minHeight: 5,
-                  color: renk,
-                  backgroundColor: const Color(0xFFE8EEF1),
-                ),
-              ),
+              kutu('Satış', tl0(g.tutar), Renk.anaKoyu, Renk.anaAcik),
+              const SizedBox(width: 6),
+              kutu('Tahsil edilen', tl0(g.odenen), Renk.yesil, Renk.yesilAcik),
+              const SizedBox(width: 6),
+              kutu('Alacak', tl0(g.kalan), Renk.kirmizi, Renk.kirmiziAcik),
             ],
           ),
-        )),
-      ],
+          const SizedBox(height: 6),
+          UrunAlacakListesi(urunler: urunOzetleri(g.siparisler)),
+        ],
+      ),
     );
-  }
-
-  TableRow _toplamSatiri({required String miktar, required String tutar}) {
-    const stil = TextStyle(
-        fontSize: 13.5, fontWeight: FontWeight.w700, color: Renk.yazi);
-    Widget c(String y, {TextAlign a = TextAlign.right}) => Padding(
-          padding: _hucre,
-          child: FittedBox(
-            alignment: a == TextAlign.left ? Alignment.centerLeft : Alignment.centerRight,
-            fit: BoxFit.scaleDown,
-            child: Text(y, style: stil),
-          ),
-        );
-    return TableRow(children: [
-      c('Toplam', a: TextAlign.left),
-      c(miktar),
-      c(tutar),
-      c('%100'),
-    ]);
   }
 }
 

@@ -283,6 +283,34 @@ class Firma {
       );
 }
 
+/// Bir ürünün satış ve alacak toplamı.
+class UrunOzeti {
+  UrunOzeti(this.ad);
+  final String ad;
+
+  /// Birime göre toplam miktar (ör. {'kg': 350, 'çuval': 4}).
+  final Map<String, double> miktar = {};
+  int adet = 0;
+  double tutar = 0, odenen = 0, kalan = 0;
+}
+
+/// Siparişleri ürüne göre toplar (en çok satış tutarı olan başta).
+List<UrunOzeti> urunOzetleri(Iterable<Siparis> siparisler) {
+  final g = <String, UrunOzeti>{};
+  for (final s in siparisler) {
+    final ad = s.urun.trim().isEmpty ? '—' : s.urun.trim();
+    final u = g.putIfAbsent(ad.toLowerCase(), () => UrunOzeti(ad));
+    final b = s.birim.trim().toLowerCase() == 'ton' ? 'kg' : s.birim.trim();
+    final m = s.birim.trim().toLowerCase() == 'ton' ? s.miktar * 1000 : s.miktar;
+    u.miktar[b] = (u.miktar[b] ?? 0) + m;
+    u.adet++;
+    u.tutar += s.toplam;
+    u.odenen += s.odenen;
+    u.kalan += s.kalan;
+  }
+  return g.values.toList()..sort((a, b) => b.tutar.compareTo(a.tutar));
+}
+
 /// Bir aracının satış toplamı (sıralama için).
 class AraciSatir {
   const AraciSatir({required this.ad, required this.kg, required this.siparis});

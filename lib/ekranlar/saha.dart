@@ -99,6 +99,9 @@ class _SahaKabukState extends State<SahaKabuk> {
         final toplamKg =
             d.siparisler.fold(0.0, (a, s) => a + AraciOzeti.kgKarsiligi(s));
         final toplamTutar = d.siparisler.fold(0.0, (a, s) => a + s.toplam);
+        final toplamAlinan = d.siparisler.fold(0.0, (a, s) => a + s.odenen);
+        final toplamAlacak = d.siparisler.fold(0.0, (a, s) => a + s.kalan);
+        final urunler = urunOzetleri(d.siparisler);
         final musteriler = <String, List<Siparis>>{};
         for (final s in d.siparisler) {
           musteriler.putIfAbsent(musteriAnahtari(s.musteri), () => []).add(s);
@@ -202,23 +205,29 @@ class _SahaKabukState extends State<SahaKabuk> {
                 children: [
                   Expanded(
                     child: Hap(
-                        emoji: '🛒',
-                        deger: tl0(bugunSatis),
-                        etiket: 'Bugün ${bugunku.length} satış',
-                        renk: Renk.amber,
-                        zemin: Renk.amberAcik),
+                        emoji: '⏳',
+                        deger: tl0(toplamAlacak),
+                        etiket: 'Alacağım',
+                        renk: Renk.kirmizi,
+                        zemin: Renk.kirmiziAcik,
+                        onTap: () => setState(() => _gorunum = 0)),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Hap(
                         emoji: '📥',
-                        deger: tl0(bugunTahsil),
-                        etiket: 'Bugün tahsil',
+                        deger: tl0(toplamAlinan),
+                        etiket: 'Tahsil edilen',
                         renk: Renk.yesil,
                         zemin: Renk.yesilAcik),
                   ),
                 ],
               ),
+              const SizedBox(height: 6),
+              Text(
+                  'Bugün: ${bugunku.length} satış · ${tl0(bugunSatis)} · tahsil ${tl0(bugunTahsil)}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, color: Renk.soluk)),
               const SizedBox(height: 12),
               Buton(
                 yazi: 'Yeni Satış',
@@ -232,6 +241,29 @@ class _SahaKabukState extends State<SahaKabuk> {
                 buAy: _buAy,
                 degistir: (v) => setState(() => _buAy = v),
               ),
+              if (urunler.isNotEmpty)
+                Panel(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Row(
+                        children: [
+                          Text('📦 ', style: TextStyle(fontSize: 18)),
+                          Expanded(
+                            child: Text('Ürünlerime göre satış ve alacak',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Renk.yazi)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      UrunAlacakListesi(urunler: urunler),
+                    ],
+                  ),
+                ),
               Row(
                 children: [
                   const Expanded(
