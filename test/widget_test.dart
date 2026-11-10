@@ -23,6 +23,43 @@ Siparis _s({double? fiyat, bool teslim = false, List<double> odemeler = const []
     );
 
 void main() {
+  test('Aracı sıralaması kilo ve sipariş sayısına göre hesaplanır', () {
+    Siparis s(String araci, double miktar, String birim, int t) => Siparis(
+        id: '$araci$t',
+        no: t,
+        musteri: 'M',
+        urun: 'Çekirdek',
+        miktar: miktar,
+        birim: birim,
+        araci: araci,
+        olusturan: 'u',
+        olusturma: t);
+    final simdi = DateTime(2026, 11, 10);
+    final buAy = DateTime(2026, 11, 2).millisecondsSinceEpoch;
+    final gecenAy = DateTime(2026, 10, 2).millisecondsSinceEpoch;
+    final o = AraciOzeti.hesapla([
+      s('Ali', 35, 'kg', buAy),
+      s('ali', 1, 'ton', gecenAy),
+      s('Veli', 200, 'kg', buAy),
+      s('', 10, 'adet', buAy),
+    ], simdi);
+    expect(o.ay, '2026-11');
+    expect(o.tum.first.ad, 'Ali');
+    expect(o.tum.first.kg, 1035);
+    expect(o.tum.first.siparis, 2);
+    expect(o.buAy.first.ad, 'Veli');
+    expect(o.buAy.map((x) => x.ad), contains(dogrudanSatis));
+    expect(AraciOzeti.hesapla([s('Ali', 35, 'kg', buAy)], simdi).imza,
+        AraciOzeti.hesapla([s('Ali', 35, 'kg', buAy)], simdi).imza);
+  });
+
+  test('Aynı müşteri farklı yazılsa da tek kişi sayılır', () {
+    expect(musteriAnahtari('Mesut  YAKUT '), musteriAnahtari('mesut yakut'));
+    expect(musteriAnahtari('İbrahim Işık'), musteriAnahtari('ibrahim ışık'));
+    expect(musteriAnahtari('Ekrem Komşu') == musteriAnahtari('Meryem Komşu'),
+        false);
+  });
+
   test('Aşamalar sırayla ilerler', () {
     expect(_s().asama, Asama.fiyat);
     expect(_s(fiyat: 12.5).asama, Asama.teslim);

@@ -216,6 +216,7 @@ class Firma {
     required this.kod,
     required this.sayac,
     this.eskiKodVar = false,
+    this.araciOzeti,
   });
 
   final String id;
@@ -239,6 +240,9 @@ class Firma {
 
   /// Firma kaydında eski sürümden kalan kod alanları var mı (taşınmalı).
   final bool eskiKodVar;
+
+  /// Aracı sıralaması (yöneticinin uygulaması yazar; saha çalışanları okur).
+  final AraciOzeti? araciOzeti;
 
   bool yonetici(String uid) => yoneticiler.contains(uid);
   List<String> get birimListesi =>
@@ -273,7 +277,105 @@ class Firma {
         kod: _s(m['kod']),
         sayac: _i(m['sayac']),
         eskiKodVar: m.containsKey('kod') || m.containsKey('katilKod'),
+        araciOzeti: m['araciOzet'] is Map
+            ? AraciOzeti.fromMap(m['araciOzet'] as Map)
+            : null,
       );
+}
+
+/// Bir aracının satış toplamı (sıralama için).
+class AraciSatir {
+  const AraciSatir({required this.ad, required this.kg, required this.siparis});
+  final String ad;
+
+  /// Kilogram karşılığı toplam miktar (ton × 1000; diğer birimler sayılmaz).
+  final double kg;
+  final int siparis;
+
+  factory AraciSatir.fromMap(Map m) =>
+      AraciSatir(ad: _s(m['ad']), kg: _d(m['kg']), siparis: _i(m['siparis']));
+
+  Map<String, dynamic> toMap() => {'ad': ad, 'kg': kg, 'siparis': siparis};
+}
+
+/// Aracı bazında satış sıralaması: bu ay ve bütün zamanlar.
+/// Saha çalışanları başkalarının siparişlerini okuyamadığı için yöneticinin
+/// uygulaması bunu hesaplayıp firma kaydına ("araciOzet") yazar.
+class AraciOzeti {
+  const AraciOzeti(
+      {required this.ay, required this.buAy, required this.tum, this.imza = '', this.tarih = 0});
+
+  /// "2026-11" biçiminde, [buAy] listesinin ait olduğu ay.
+  final String ay;
+  final List<AraciSatir> buAy;
+  final List<AraciSatir> tum;
+  final String imza;
+  final int tarih;
+
+  static double kgKarsiligi(Siparis s) {
+    final b = s.birim.trim().toLowerCase();
+    if (b == 'kg' || b == 'kilo' || b == 'kilogram') return s.miktar;
+    if (b == 'ton') return s.miktar * 1000;
+    return 0;
+  }
+
+  static String ayAnahtari(DateTime t) =>
+      '${t.year}-${t.month.toString().padLeft(2, '0')}';
+
+  static List<AraciSatir> _topla(Iterable<Siparis> l) {
+    final g = <String, ({String ad, double kg, int n})>{};
+    for (final s in l) {
+      final ad = s.araciAdi.trim();
+      final k = ad.toLowerCase();
+      final e = g[k];
+      g[k] = (
+        ad: e?.ad ?? ad,
+        kg: (e?.kg ?? 0) + kgKarsiligi(s),
+        n: (e?.n ?? 0) + 1,
+      );
+    }
+    final r = [
+      for (final e in g.values)
+        AraciSatir(ad: e.ad, kg: (e.kg * 100).round() / 100, siparis: e.n)
+    ]..sort((a, b) => b.kg != a.kg
+        ? b.kg.compareTo(a.kg)
+        : b.siparis.compareTo(a.siparis));
+    return r;
+  }
+
+  factory AraciOzeti.hesapla(List<Siparis> siparisler, DateTime simdi) {
+    final ayBasi = DateTime(simdi.year, simdi.month).millisecondsSinceEpoch;
+    final tum = _topla(siparisler);
+    final buAy = _topla(siparisler.where((s) => s.olusturma >= ayBasi));
+    final ay = ayAnahtari(simdi);
+    final imza = [
+      ay,
+      for (final l in [buAy, tum])
+        l.map((x) => '${x.ad}:${x.kg}:${x.siparis}').join('|')
+    ].join('#');
+    return AraciOzeti(ay: ay, buAy: buAy, tum: tum, imza: imza);
+  }
+
+  factory AraciOzeti.fromMap(Map m) {
+    List<AraciSatir> l(Object? v) => v is List
+        ? v.whereType<Map>().map(AraciSatir.fromMap).toList()
+        : const [];
+    return AraciOzeti(
+      ay: _s(m['ay']),
+      buAy: l(m['buAy']),
+      tum: l(m['tum']),
+      imza: _s(m['imza']),
+      tarih: _i(m['tarih']),
+    );
+  }
+
+  Map<String, dynamic> toMap(int tarih) => {
+        'ay': ay,
+        'buAy': buAy.map((x) => x.toMap()).toList(),
+        'tum': tum.map((x) => x.toMap()).toList(),
+        'imza': imza,
+        'tarih': tarih,
+      };
 }
 
 /// "1.234,5" / "3.125" / "12.5" / "1 234" gibi yazımları sayıya çevirir.

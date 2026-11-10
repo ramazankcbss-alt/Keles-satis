@@ -512,3 +512,141 @@ class ToplamKutusu extends StatelessWidget {
         ),
       );
 }
+
+/// Renkli özet hapı (açık zemin, renkli çerçeve, emoji): ana sayfanın
+/// üstündeki toplamlar için.
+class Hap extends StatelessWidget {
+  const Hap({
+    super.key,
+    required this.emoji,
+    required this.deger,
+    required this.etiket,
+    required this.renk,
+    required this.zemin,
+    this.onTap,
+  });
+
+  final String emoji;
+  final String deger;
+  final String etiket;
+  final Color renk;
+  final Color zemin;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: zemin,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(color: renk.withValues(alpha: .55), width: 2),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(deger,
+                            style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: Renk.yazi)),
+                      ),
+                      Text(
+                          etiket
+                              .replaceAll('i', 'İ')
+                              .replaceAll('ı', 'I')
+                              .toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: .4,
+                              color: renk)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+/// Renkli kutucuk: üstte küçük bilgi, ortada emoji, altta başlık.
+class RenkliKutu extends StatelessWidget {
+  const RenkliKutu({
+    super.key,
+    required this.emoji,
+    required this.baslik,
+    required this.renk,
+    required this.zemin,
+    required this.onTap,
+    this.ust,
+  });
+
+  final String emoji;
+  final String baslik;
+  final String? ust;
+  final Color renk;
+  final Color zemin;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: zemin,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: renk.withValues(alpha: .45), width: 2),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (ust != null) ...[
+                  Text(ust!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: Renk.yazi)),
+                  Container(
+                    height: 1.5,
+                    margin: const EdgeInsets.fromLTRB(10, 5, 10, 4),
+                    color: renk.withValues(alpha: .25),
+                  ),
+                ],
+                Text(emoji, style: const TextStyle(fontSize: 28)),
+                const SizedBox(height: 3),
+                Text(baslik,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        height: 1.15,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: Renk.yazi)),
+              ],
+            ),
+          ),
+        ),
+      );
+}
