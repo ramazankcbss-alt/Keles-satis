@@ -26,13 +26,14 @@ yaptığı görünür.
 
 ## Teknik
 
-- Flutter + Firebase (Auth + Firestore). Eğitim Takip ile **aynı Firebase
-  projesi** (`egitim-takip-5a833`) kullanılır; veriler `satis_` ile başlayan
-  ayrı koleksiyonlardadır.
-- `firestore.rules` dosyası **hem Eğitim Takip'in hem Keleş Satış'ın**
-  kurallarını içerir (bir Firebase projesinde tek kural dosyası olur).
-  Değiştirince Firebase Console → Firestore → Kurallar'a dosyanın tamamını
-  yapıştırıp Yayınla deyin. Aynı dosya egitim-takip deposunda da durur.
+- Flutter + Firebase (Auth + Firestore). Kendi Firebase projesi:
+  **`keles-satis`** (10 Kasım 2026'da `egitim-takip-5a833` projesinden
+  taşındı; ayrıntı: `yeni-proje/BENIOKU.md`).
+- `firestore.rules` yalnızca Keleş Satış kurallarıdır. Değiştirince Firebase
+  Console'da **keles-satis** projesini seçip Firestore → Kurallar'a dosyanın
+  tamamını yapıştırın ve Yayınla deyin.
+- Veriler her gece Google Drive'daki "Uygulama Yedekleri" klasörüne
+  yedeklenir (betik: `yedek/betik/`, Google Apps Script).
 - `main` dalına her gönderimde GitHub Actions APK derler ve **Releases**
   bölümüne koyar. Kurulu uygulama yeni sürümü kendisi bulup günceller.
 - İmza: uygulamanın kendi anahtarı (`ci/keles-satis.p12`). Şifresi depo

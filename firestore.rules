@@ -134,25 +134,6 @@ service cloud.firestore {
         allow delete: if satisYonetici(fid)
           || (satisUye(fid) && resource.data.olusturan == uid());
       }
-
-      // DÜZELTME 6: "Son hareketler" kaydı (firma altında tutuluyorsa).
-      // Kayıtlar sonradan değiştirilemez; ekip görür, ekip ve saha ekler.
-      match /satis_hareketleri/{hid} {
-        allow read: if satisUye(fid);
-        allow create: if satisUye(fid) || satisSaha(fid);
-        allow update: if false;
-        allow delete: if satisYonetici(fid);
-      }
-    }
-
-    // DÜZELTME 6: "Son hareketler" en üst seviyede tutuluyorsa
-    // (belgede firmaId alanı olmalı). Hangisini kullanıyorsan diğerini silebilirsin.
-    match /satis_hareketleri/{hid} {
-      allow read: if satisUye(resource.data.firmaId);
-      allow create: if satisUye(request.resource.data.firmaId)
-        || satisSaha(request.resource.data.firmaId);
-      allow update: if false;
-      allow delete: if satisYonetici(resource.data.firmaId);
     }
   }
 }
