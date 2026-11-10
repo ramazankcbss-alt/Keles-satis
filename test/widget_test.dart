@@ -23,6 +23,20 @@ Siparis _s({double? fiyat, bool teslim = false, List<double> odemeler = const []
     );
 
 void main() {
+  test('Ürün bazında satış ve alacak toplanır', () {
+    final l = [
+      _s(fiyat: 10, teslim: true, odemeler: [400]),
+      _s(fiyat: 10, teslim: true),
+    ];
+    final u = urunOzetleri(l);
+    expect(u.length, 1);
+    expect(u.first.ad, 'Domates');
+    expect(u.first.miktar['kg'], 200);
+    expect(u.first.tutar, 2000);
+    expect(u.first.odenen, 400);
+    expect(u.first.kalan, 1600);
+  });
+
   test('Aracı sıralaması kilo ve sipariş sayısına göre hesaplanır', () {
     Siparis s(String araci, double miktar, String birim, int t) => Siparis(
         id: '$araci$t',

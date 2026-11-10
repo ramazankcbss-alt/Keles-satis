@@ -216,6 +216,65 @@ class SiparisSatiri extends StatelessWidget {
   }
 }
 
+/// Ürün ürün satış ve alacak listesi.
+class UrunAlacakListesi extends StatelessWidget {
+  const UrunAlacakListesi({super.key, required this.urunler});
+  final List<UrunOzeti> urunler;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final u in urunler)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
+              decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: Renk.cizgi))),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(u.ad,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Renk.yazi)),
+                        Text(
+                            '${u.miktar.entries.map((m) => '${sayi(m.value)} ${m.key}').join(' · ')} · ${u.adet} satış',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 12, color: Renk.soluk)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(tl0(u.tutar),
+                          style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: Renk.yazi)),
+                      Text(u.kalan > 0 ? 'Alacak ${tl0(u.kalan)}' : 'Alacak yok',
+                          style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: u.kalan > 0 ? Renk.kirmizi : Renk.yesil)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+}
+
 /// Küçük bilgi etiketi (satan, aracı, teslim, tahsil).
 class _Etiket extends StatelessWidget {
   const _Etiket(this.ikon, this.yazi, this.renk, this.zemin);
