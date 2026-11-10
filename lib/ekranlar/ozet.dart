@@ -11,6 +11,16 @@ class _Grup {
   int adet = 0;
   double toplam = 0, alinan = 0, kalan = 0;
   final Map<String, double> miktar = {};
+
+  /// Aynı kişinin farklı yazılışları ve kaç kez kullanıldıkları.
+  final Map<String, int> yazilis = {};
+
+  /// En çok kullanılan yazılış (ekranda gösterilen ad).
+  String get ad => yazilis.isEmpty
+      ? '—'
+      : (yazilis.entries.toList()..sort((a, b) => b.value.compareTo(a.value)))
+          .first
+          .key;
 }
 
 /// Müşteri bakiyeleri ya da ürün bazında satış özeti.
@@ -28,8 +38,12 @@ class OzetEkrani extends StatelessWidget {
         builder: (context, _) {
           final g = <String, _Grup>{};
           for (final s in durum.siparisler) {
-            final k = (musteri ? s.musteri : s.urun).trim();
-            final x = g.putIfAbsent(k.isEmpty ? '—' : k, _Grup.new);
+            final ham = (musteri ? s.musteri : s.urun).trim();
+            final k = ham.isEmpty
+                ? '—'
+                : (musteri ? musteriAnahtari(ham) : ham);
+            final x = g.putIfAbsent(k, _Grup.new);
+            if (ham.isNotEmpty) x.yazilis[ham] = (x.yazilis[ham] ?? 0) + 1;
             x.adet++;
             x.toplam += s.toplam;
             x.alinan += s.odenen;
@@ -70,10 +84,10 @@ class OzetEkrani extends StatelessWidget {
                                 MaterialPageRoute(
                                   builder: (_) => SiparisListesiEkrani(
                                     durum: durum,
-                                    baslik: e.key,
-                                    filtre: (s) =>
-                                        (musteri ? s.musteri : s.urun).trim() ==
-                                        e.key,
+                                    baslik: e.value.ad,
+                                    filtre: (s) => musteri
+                                        ? musteriAnahtari(s.musteri) == e.key
+                                        : s.urun.trim() == e.key,
                                     asamaSecimi: true,
                                     bosIkon: Icons.list_alt,
                                     bosYazi: 'Kayıt yok.',
@@ -105,7 +119,7 @@ class OzetEkrani extends StatelessWidget {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(e.key,
+                                          Text(e.value.ad,
                                               style: const TextStyle(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.w700)),
@@ -143,7 +157,7 @@ class OzetEkrani extends StatelessWidget {
                                             size: 20, color: Renk.soluk),
                                         onPressed: () => musteriDuzelt(
                                             context, durum,
-                                            eskiAd: e.key),
+                                            eskiAd: e.value.ad),
                                       ),
                                   ],
                                 ),

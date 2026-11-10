@@ -216,6 +216,225 @@ class SiparisSatiri extends StatelessWidget {
   }
 }
 
+/// Küçük bilgi etiketi (satan, aracı, teslim, tahsil).
+class _Etiket extends StatelessWidget {
+  const _Etiket(this.ikon, this.yazi, this.renk, this.zemin);
+  final IconData ikon;
+  final String yazi;
+  final Color renk;
+  final Color zemin;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration:
+            BoxDecoration(color: zemin, borderRadius: BorderRadius.circular(6)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(ikon, size: 13, color: renk),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(yazi,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 12, color: renk, fontWeight: FontWeight.w500)),
+            ),
+          ],
+        ),
+      );
+}
+
+/// Bir siparişin satan, aracı, teslim ve tahsilat bilgisi.
+class SiparisDetaySatiri extends StatelessWidget {
+  const SiparisDetaySatiri({super.key, required this.durum, required this.s});
+  final Durum durum;
+  final Siparis s;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = durum;
+    const gri = Color(0xFFEFF3F5);
+    final etiketler = <Widget>[
+      _Etiket(Icons.person_outline, 'Satan: ${d.isim(s.olusturan)}', Renk.yazi, gri),
+      _Etiket(Icons.handshake_outlined, 'Aracı: ${s.araciAdi}', Renk.anaKoyu,
+          Renk.anaAcik),
+      if (s.fiyat == null)
+        const _Etiket(Icons.sell_outlined, 'Fiyat bekliyor', Renk.amber,
+            Renk.amberAcik)
+      else ...[
+        s.teslim
+            ? _Etiket(
+                Icons.local_shipping_outlined,
+                s.teslimEden.isEmpty
+                    ? 'Teslim edildi'
+                    : 'Teslim edildi · ${d.isim(s.teslimEden)}',
+                Renk.yesil,
+                Renk.yesilAcik)
+            : const _Etiket(Icons.local_shipping_outlined, 'Teslim bekliyor',
+                Renk.mavi, Renk.maviAcik),
+        if (s.kalan <= 0)
+          _Etiket(
+              Icons.payments_outlined,
+              s.tahsilatlar.isEmpty
+                  ? 'Tahsil edildi'
+                  : 'Tahsil edildi · ${d.isim(s.tahsilatlar.last.by)}',
+              Renk.yesil,
+              Renk.yesilAcik)
+        else if (s.odenen > 0)
+          _Etiket(Icons.payments_outlined,
+              'Alınan ${tl0(s.odenen)} · kalan ${tl0(s.kalan)}', Renk.turuncu,
+              Renk.turuncuAcik)
+        else
+          const _Etiket(Icons.payments_outlined, 'Tahsil edilmedi', Renk.turuncu,
+              Renk.turuncuAcik),
+      ],
+    ];
+    return InkWell(
+      onTap: () => detayGoster(context, d, s),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                      '${s.urun} · ${sayi(s.miktar)} ${s.birim} · ${once(s.sonIslem)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13.5, color: Renk.yazi)),
+                ),
+                const SizedBox(width: 8),
+                Text(s.fiyat == null ? '—' : tl0(s.toplam),
+                    style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: Renk.yazi)),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Wrap(spacing: 5, runSpacing: 4, children: etiketler),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Son hareketler"de bir müşteri: aynı adla yapılan satışlar tek kartta,
+/// müşterinin toplam tutarı ve kalan bakiyesiyle.
+class MusteriHareketKarti extends StatelessWidget {
+  const MusteriHareketKarti({
+    super.key,
+    required this.durum,
+    required this.siparisler,
+    this.gosterilecek = 3,
+  });
+
+  final Durum durum;
+
+  /// Müşterinin bütün siparişleri, en yeni başta.
+  final List<Siparis> siparisler;
+  final int gosterilecek;
+
+  @override
+  Widget build(BuildContext context) {
+    final ad = siparisler.first.musteri.trim();
+    final anahtar = musteriAnahtari(ad);
+    final toplam = siparisler.fold(0.0, (a, s) => a + s.toplam);
+    final kalan = siparisler.fold(0.0, (a, s) => a + s.kalan);
+    final fazla = siparisler.length - gosterilecek;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 10, 4, 2),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                    color: Renk.anaAcik, borderRadius: BorderRadius.circular(9)),
+                child: const Icon(Icons.person_outline,
+                    color: Renk.anaKoyu, size: 19),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(ad.isEmpty ? '—' : ad,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w700,
+                            color: Renk.yazi)),
+                    Text('${siparisler.length} sipariş · toplam ${tl0(toplam)}',
+                        style:
+                            const TextStyle(fontSize: 12.5, color: Renk.soluk)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(kalan > 0 ? tl0(kalan) : 'Borç yok',
+                      style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: kalan > 0 ? Renk.kirmizi : Renk.yesil)),
+                  if (kalan > 0)
+                    const Text('kalan bakiye',
+                        style: TextStyle(fontSize: 11.5, color: Renk.soluk)),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final s in siparisler.take(gosterilecek))
+                SiparisDetaySatiri(durum: durum, s: s),
+              if (fazla > 0)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 4)),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SiparisListesiEkrani(
+                          durum: durum,
+                          baslik: ad,
+                          filtre: (s) => musteriAnahtari(s.musteri) == anahtar,
+                          asamaSecimi: true,
+                          bosIkon: Icons.list_alt,
+                          bosYazi: 'Kayıt yok.',
+                        ),
+                      ),
+                    ),
+                    child: Text('+$fazla sipariş daha'),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Arama kutulu sipariş listesi (sekme içinde ya da ayrı ekranda).
 class SiparisListesi extends StatefulWidget {
   const SiparisListesi({

@@ -946,10 +946,11 @@ Future<void> musteriDuzelt(BuildContext ctx, Durum d,
     {Siparis? siparis, String? eskiAd}) {
   final eski = (siparis?.musteri ?? eskiAd ?? '').trim();
   final ayni = d.siparisler
-      .where((x) => x.musteri.trim().toLowerCase() == eski.toLowerCase())
+      .where((x) => musteriAnahtari(x.musteri) == musteriAnahtari(eski))
       .toList();
   final digerleri = {for (final x in d.siparisler) x.musteri.trim()}
-    ..removeWhere((e) => e.isEmpty || e.toLowerCase() == eski.toLowerCase());
+    ..removeWhere(
+        (e) => e.isEmpty || musteriAnahtari(e) == musteriAnahtari(eski));
   return altSayfa(
     ctx,
     baslik: 'Müşteri adını düzelt',
@@ -964,7 +965,7 @@ Future<void> musteriDuzelt(BuildContext ctx, Durum d,
       return StatefulBuilder(builder: (c, set) {
         final yeni = ad.text.trim();
         final birlesir = digerleri
-            .where((e) => e.toLowerCase() == yeni.toLowerCase())
+            .where((e) => musteriAnahtari(e) == musteriAnahtari(yeni))
             .firstOrNull;
         Future<void> kaydet() async {
           if (yeni.isEmpty) {

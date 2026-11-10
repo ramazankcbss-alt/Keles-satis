@@ -6,6 +6,7 @@ import '../bicim.dart';
 import '../servis/bildirim.dart';
 import '../servis/guncelleme.dart';
 import '../servis/veri.dart';
+import '../servis/yedek.dart';
 import '../tema.dart';
 import 'formlar.dart';
 
@@ -24,6 +25,7 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
   final _birim = TextEditingController();
   bool _adYuklendi = false;
   Map<String, bool>? _bildirim;
+  bool _yedekleniyor = false;
 
   Durum get d => widget.durum;
 
@@ -363,6 +365,50 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                   ],
                 ),
               ),
+
+              // ---------------- Yedekleme
+              if (d.uye)
+                Panel(
+                  baslik: 'Yedekleme',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Firmanın bütün siparişleri, tahsilatları ve ayarları tek bir dosyaya alınır. Açılan ekranda "Drive\'a kaydet"i seçerek Google Drive\'a koyabilirsiniz.',
+                        style: TextStyle(color: Renk.soluk, fontSize: 13.5),
+                      ),
+                      const SizedBox(height: 10),
+                      Buton(
+                        yazi: 'Yedek Al ve Kaydet',
+                        ikon: Icons.backup_outlined,
+                        mesgul: _yedekleniyor,
+                        renk: ButonRenk.birincil,
+                        onTap: _yedekleniyor
+                            ? null
+                            : () async {
+                                setState(() => _yedekleniyor = true);
+                                try {
+                                  final n = await Yedek.alVePaylas(d);
+                                  if (context.mounted) {
+                                    bildir(context, 'Yedek hazır ($n sipariş)');
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) bildir(context, hataYazisi(e));
+                                } finally {
+                                  if (mounted) setState(() => _yedekleniyor = false);
+                                }
+                              },
+                      ),
+                      if (yon) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Ayrıca bütün veriler her gece otomatik olarak yöneticinin Google Drive\'ındaki "Uygulama Yedekleri" klasörüne yedeklenir.',
+                          style: TextStyle(color: Renk.soluk, fontSize: 12.5),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
 
               // ---------------- Firma
               Panel(

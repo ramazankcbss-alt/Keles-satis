@@ -51,3 +51,9 @@ String araMetni(String s) {
   harita.forEach((a, b) => k = k.replaceAll(a, b));
   return k.replaceAll('\u0307', '').trim();
 }
+
+/// Aynı müşteriyi tek kişi saymak için ad anahtarı: büyük/küçük harf,
+/// Türkçe harf ve fazladan boşluk farkları yok sayılır.
+/// "Mesut  YAKUT " ile "mesut yakut" aynı müşteridir.
+String musteriAnahtari(String s) =>
+    araMetni(s).replaceAll(RegExp(r'\s+'), ' ');

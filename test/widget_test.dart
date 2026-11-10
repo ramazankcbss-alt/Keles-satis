@@ -23,6 +23,13 @@ Siparis _s({double? fiyat, bool teslim = false, List<double> odemeler = const []
     );
 
 void main() {
+  test('Aynı müşteri farklı yazılsa da tek kişi sayılır', () {
+    expect(musteriAnahtari('Mesut  YAKUT '), musteriAnahtari('mesut yakut'));
+    expect(musteriAnahtari('İbrahim Işık'), musteriAnahtari('ibrahim ışık'));
+    expect(musteriAnahtari('Ekrem Komşu') == musteriAnahtari('Meryem Komşu'),
+        false);
+  });
+
   test('Aşamalar sırayla ilerler', () {
     expect(_s().asama, Asama.fiyat);
     expect(_s(fiyat: 12.5).asama, Asama.teslim);

@@ -219,7 +219,7 @@ class _OzetKart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
           color: Renk.kart,
           borderRadius: BorderRadius.circular(12),
@@ -228,11 +228,11 @@ class _OzetKart extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                   color: zemin, borderRadius: BorderRadius.circular(10)),
-              child: Icon(ikon, color: renk, size: 22),
+              child: Icon(ikon, color: renk, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -250,7 +250,7 @@ class _OzetKart extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: Text(deger,
                         style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.w700,
                             color: Renk.yazi)),
                   ),
@@ -280,258 +280,240 @@ class _AnaSayfa extends StatelessWidget {
     final gun =
         DateTime(bugun.year, bugun.month, bugun.day).millisecondsSinceEpoch;
     final bugunku = d.siparisler.where((s) => s.olusturma >= gun).length;
-    final son = d.siparisler.take(5).toList();
+    // Son hareketler: aynı müşterinin satışları tek kartta, en son işlem
+    // yapılan müşteri en üstte. Kartın toplamı müşterinin bütün siparişleridir.
+    final gruplar = <String, List<Siparis>>{};
+    for (final s in d.siparisler) {
+      final k = musteriAnahtari(s.musteri);
+      final g = gruplar[k];
+      if (g != null) {
+        g.add(s);
+      } else if (gruplar.length < 12) {
+        gruplar[k] = [s];
+      }
+    }
+    final musteriler = gruplar.values.toList();
 
-    Widget satir(IconData ikon, Color renk, Color zemin, String ad, int sayi,
-            VoidCallback onTap,
-            {bool vurgulu = false, bool cizgi = true}) =>
-        Column(
-          children: [
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-              leading: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                    color: zemin, borderRadius: BorderRadius.circular(9)),
-                child: Icon(ikon, color: renk, size: 21),
-              ),
-              title: Text(ad,
-                  style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w500, color: Renk.yazi)),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SayiRozeti(sayi: sayi, vurgulu: vurgulu),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.chevron_right, color: Renk.soluk),
-                ],
-              ),
+    Widget kisayol(IconData ikon, String yazi, Color renk, Color zemin,
+            VoidCallback onTap) =>
+        Expanded(
+          child: Material(
+            color: Renk.kart,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
               onTap: onTap,
-            ),
-            if (cizgi) const Divider(height: 1, indent: 54),
-          ],
-        );
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      children: [
-        // Karşılama
-        Padding(
-          padding: const EdgeInsets.fromLTRB(2, 0, 2, 14),
-          child: Row(
-            children: [
-              Expanded(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Renk.cizgi),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Merhaba, $ilkAd',
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                          color: zemin, borderRadius: BorderRadius.circular(9)),
+                      child: Icon(ikon, color: renk, size: 18),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(yazi,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
+                            height: 1.15,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
                             color: Renk.yazi)),
-                    const SizedBox(height: 2),
-                    Text('Bugün $bugunku yeni sipariş girildi',
-                        style: const TextStyle(fontSize: 14, color: Renk.soluk)),
                   ],
                 ),
               ),
-              DurumEtiketi(
-                yazi: d.yonetici ? 'Yönetici' : 'Ekip üyesi',
-                renk: Renk.anaKoyu,
-                zemin: Renk.anaAcik,
-              ),
-            ],
+            ),
           ),
-        ),
+        );
 
-        // Özet kartları
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 2.15,
+    Widget tumSiparisler() => SiparisListesiEkrani(
+        durum: d,
+        baslik: 'Tüm siparişler',
+        filtre: (_) => true,
+        asamaSecimi: true,
+        bosIkon: Icons.list_alt,
+        bosYazi: 'Kayıt bulunamadı.');
+
+    final sayfa = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Karşılama
+        Row(
           children: [
-            _OzetKart(
-                ikon: Icons.trending_up,
-                etiket: 'Toplam satış',
-                deger: tl0(ciro),
-                renk: Renk.anaKoyu,
-                zemin: Renk.anaAcik),
-            _OzetKart(
-                ikon: Icons.account_balance_wallet_outlined,
-                etiket: 'Tahsil edilen',
-                deger: tl0(tah),
-                renk: Renk.yesil,
-                zemin: Renk.yesilAcik),
-            _OzetKart(
-                ikon: Icons.schedule,
-                etiket: 'Kalan alacak',
-                deger: tl0(d.alacak),
-                renk: Renk.turuncu,
-                zemin: Renk.turuncuAcik),
-            _OzetKart(
-                ikon: Icons.receipt_long_outlined,
-                etiket: 'Sipariş',
-                deger: sayi(d.siparisler.length),
-                renk: Renk.mavi,
-                zemin: Renk.maviAcik),
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        // Tahsilat oranı
-        Panel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text('Tahsilat oranı',
-                        style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Renk.yazi)),
-                  ),
-                  Text('%${(oran * 100).round()}',
+            Expanded(
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(
+                      text: 'Merhaba, $ilkAd  ',
                       style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
-                          color: Renk.anaKoyu)),
-                ],
+                          color: Renk.yazi)),
+                  TextSpan(
+                      text: 'Bugün $bugunku yeni sipariş',
+                      style: const TextStyle(fontSize: 13, color: Renk.soluk)),
+                ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: oran,
-                  minHeight: 10,
-                  backgroundColor: const Color(0xFFE8EEF1),
+            ),
+            DurumEtiketi(
+              yazi: d.yonetici ? 'Yönetici' : 'Ekip üyesi',
+              renk: Renk.anaKoyu,
+              zemin: Renk.anaAcik,
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Özet kartları (2 x 2)
+        Row(
+          children: [
+            Expanded(
+              child: _OzetKart(
+                  ikon: Icons.trending_up,
+                  etiket: 'Toplam satış',
+                  deger: tl0(ciro),
+                  renk: Renk.anaKoyu,
+                  zemin: Renk.anaAcik),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _OzetKart(
+                  ikon: Icons.account_balance_wallet_outlined,
+                  etiket: 'Tahsil edilen · %${(oran * 100).round()}',
+                  deger: tl0(tah),
+                  renk: Renk.yesil,
+                  zemin: Renk.yesilAcik),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _OzetKart(
+                  ikon: Icons.schedule,
+                  etiket: 'Kalan alacak',
+                  deger: tl0(d.alacak),
+                  renk: Renk.turuncu,
+                  zemin: Renk.turuncuAcik),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _OzetKart(
+                  ikon: Icons.receipt_long_outlined,
+                  etiket: 'Sipariş',
+                  deger: sayi(d.siparisler.length),
+                  renk: Renk.mavi,
+                  zemin: Renk.maviAcik),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Kısayollar (fiyat, teslim, tahsilat ve aracılar alttaki sekmelerde)
+        Row(
+          children: [
+            kisayol(
+                Icons.check_circle_outline,
+                'Tamamlanan\n${d.sayi(Asama.tamam)}',
+                Renk.yesil,
+                Renk.yesilAcik,
+                () => git(SiparisListesiEkrani(
+                    durum: d,
+                    baslik: 'Tamamlanan siparişler',
+                    filtre: (s) => s.asama == Asama.tamam,
+                    bosIkon: Icons.check_circle_outline,
+                    bosYazi: 'Henüz tamamlanan sipariş yok.',
+                    ozet: (l) =>
+                        'Tahsil edilen ${tl(l.fold(0.0, (a, s) => a + s.odenen))}'))),
+            const SizedBox(width: 8),
+            kisayol(Icons.list_alt, 'Tüm\nsiparişler', Renk.soluk,
+                const Color(0xFFEFF3F5), () => git(tumSiparisler())),
+            const SizedBox(width: 8),
+            kisayol(Icons.people_outline, 'Müşteri\nbakiyeleri', Renk.anaKoyu,
+                Renk.anaAcik, () => git(OzetEkrani(durum: d, musteri: true))),
+            const SizedBox(width: 8),
+            kisayol(Icons.inventory_2_outlined, 'Ürün\nsatışları', Renk.mavi,
+                Renk.maviAcik, () => git(OzetEkrani(durum: d, musteri: false))),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Son hareketler: kalan alanı doldurur, kendi içinde kayar.
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Renk.kart,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Renk.cizgi),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 6, 0),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Son hareketler',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Renk.yazi)),
+                      ),
+                      TextButton(
+                          onPressed: () => git(tumSiparisler()),
+                          child: const Text('Tümü')),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text('${tl0(tah)} / ${tl0(ciro)} tahsil edildi',
-                  style: const TextStyle(fontSize: 13, color: Renk.soluk)),
-            ],
+                Expanded(
+                  child: !d.yuklendi
+                      ? const Center(child: CircularProgressIndicator())
+                      : musteriler.isEmpty
+                          ? const SingleChildScrollView(
+                              child: BosDurum(
+                                  ikon: Icons.receipt_long_outlined,
+                                  yazi:
+                                      'Henüz sipariş yok.\n"Yeni Sipariş" ile ilk siparişi girin.'),
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(10, 0, 10, 80),
+                              itemCount: musteriler.length,
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 14),
+                              itemBuilder: (_, i) => MusteriHareketKarti(
+                                  durum: d, siparisler: musteriler[i]),
+                            ),
+                ),
+              ],
+            ),
           ),
-        ),
-
-        // İş akışı
-        Panel(
-          baslik: 'İş akışı',
-          padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
-          child: Column(
-            children: [
-              satir(Icons.sell_outlined, Renk.amber, Renk.amberAcik,
-                  'Fiyat bekleyen', d.sayi(Asama.fiyat), () => sekmeyeGit(1),
-                  vurgulu: true),
-              satir(Icons.local_shipping_outlined, Renk.mavi, Renk.maviAcik,
-                  'Teslim bekleyen', d.sayi(Asama.teslim), () => sekmeyeGit(2),
-                  vurgulu: true),
-              satir(Icons.payments_outlined, Renk.turuncu, Renk.turuncuAcik,
-                  'Tahsilat bekleyen', d.sayi(Asama.tahsilat), () => sekmeyeGit(3),
-                  vurgulu: true),
-              satir(
-                  Icons.check_circle_outline,
-                  Renk.yesil,
-                  Renk.yesilAcik,
-                  'Tamamlanan',
-                  d.sayi(Asama.tamam),
-                  () => git(SiparisListesiEkrani(
-                      durum: d,
-                      baslik: 'Tamamlanan siparişler',
-                      filtre: (s) => s.asama == Asama.tamam,
-                      bosIkon: Icons.check_circle_outline,
-                      bosYazi: 'Henüz tamamlanan sipariş yok.',
-                      ozet: (l) =>
-                          'Tahsil edilen ${tl(l.fold(0.0, (a, s) => a + s.odenen))}'))),
-              satir(
-                  Icons.list_alt,
-                  Renk.soluk,
-                  const Color(0xFFEFF3F5),
-                  'Tüm siparişler',
-                  d.siparisler.length,
-                  () => git(SiparisListesiEkrani(
-                      durum: d,
-                      baslik: 'Tüm siparişler',
-                      filtre: (_) => true,
-                      asamaSecimi: true,
-                      bosIkon: Icons.list_alt,
-                      bosYazi: 'Kayıt bulunamadı.')),
-                  cizgi: false),
-            ],
-          ),
-        ),
-
-        // Raporlar
-        Panel(
-          baslik: 'Raporlar',
-          padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
-          child: Column(
-            children: [
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                leading: const Icon(Icons.handshake_outlined, color: Renk.anaKoyu),
-                title: const Text('Aracı bazında satışlar'),
-                trailing: const Icon(Icons.chevron_right, color: Renk.soluk),
-                onTap: () => sekmeyeGit(4),
-              ),
-              const Divider(height: 1, indent: 54),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                leading: const Icon(Icons.people_outline, color: Renk.anaKoyu),
-                title: const Text('Müşteri bakiyeleri'),
-                trailing: const Icon(Icons.chevron_right, color: Renk.soluk),
-                onTap: () => git(OzetEkrani(durum: d, musteri: true)),
-              ),
-              const Divider(height: 1, indent: 54),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                leading: const Icon(Icons.inventory_2_outlined, color: Renk.anaKoyu),
-                title: const Text('Ürün bazında satışlar'),
-                trailing: const Icon(Icons.chevron_right, color: Renk.soluk),
-                onTap: () => git(OzetEkrani(durum: d, musteri: false)),
-              ),
-            ],
-          ),
-        ),
-
-        // Son hareketler
-        Panel(
-          baslik: 'Son hareketler',
-          eylem: d.siparisler.length > son.length
-              ? TextButton(
-                  onPressed: () => git(SiparisListesiEkrani(
-                      durum: d,
-                      baslik: 'Tüm siparişler',
-                      filtre: (_) => true,
-                      asamaSecimi: true,
-                      bosIkon: Icons.list_alt,
-                      bosYazi: 'Kayıt bulunamadı.')),
-                  child: const Text('Tümü'))
-              : null,
-          padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
-          child: !d.yuklendi
-              ? const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()))
-              : son.isEmpty
-                  ? const BosDurum(
-                      ikon: Icons.receipt_long_outlined,
-                      yazi: 'Henüz sipariş yok.\n"Yeni Sipariş" ile ilk siparişi girin.')
-                  : Column(
-                      children: [
-                        for (var i = 0; i < son.length; i++) ...[
-                          SiparisSatiri(durum: d, s: son[i]),
-                          if (i < son.length - 1) const Divider(height: 1),
-                        ],
-                      ],
-                    ),
         ),
       ],
     );
+
+    // Tek sayfa: kaydırma gerekmez. Çok kısa ekranlarda sayfa bütün olarak kayar.
+    return LayoutBuilder(builder: (context, c) {
+      const enAz = 600.0;
+      final icerik = Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 8), child: sayfa);
+      if (c.maxHeight >= enAz) return icerik;
+      return SingleChildScrollView(
+          child: SizedBox(height: enAz, child: icerik));
+    });
   }
 }
