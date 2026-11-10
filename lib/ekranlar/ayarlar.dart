@@ -660,6 +660,24 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                                               'yoneticiler': List<String>.of(f.yoneticiler)..remove(u),
                                             }),
                                         'Ekipten çıkarıldı');
+                                  } else if (v == 'saha') {
+                                    if (!await _onay(
+                                        '${d.isim(u)} saha elemanı yapılsın mı?',
+                                        'Yalnızca hızlı satış ekranını ve kendi satışlarını görür. Ciro, raporlar ve ayarlar kapanır. İstediğiniz zaman yeniden ekibe alabilirsiniz.',
+                                        'Saha elemanı yap')) {
+                                      return;
+                                    }
+                                    await _calistir(
+                                        () => Veri.firmaGuncelle(d.fid, {
+                                              'uyeler': List<String>.of(f.uyeler)..remove(u),
+                                              'yoneticiler':
+                                                  List<String>.of(f.yoneticiler)..remove(u),
+                                              'saha': [
+                                                ...f.saha.where((x) => x != u),
+                                                u
+                                              ],
+                                            }),
+                                        'Saha ekibine taşındı');
                                   }
                                 },
                                 itemBuilder: (_) => [
@@ -668,6 +686,9 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                                       child: Text(f.yonetici(u)
                                           ? 'Yöneticilikten al'
                                           : 'Yönetici yap')),
+                                  const PopupMenuItem(
+                                      value: 'saha',
+                                      child: Text('Saha elemanı yap')),
                                   const PopupMenuItem(
                                       value: 'cik', child: Text('Ekipten çıkar')),
                                 ],
@@ -764,9 +785,9 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                                     PopupMenuItem(
                                         value: 'eslestir',
                                         child: Text('Aracı adlarını eşleştir')),
-                                    PopupMenuItem(
+                                      PopupMenuItem(
                                         value: 'ekip',
-                                        child: Text('Ekibe al (tam yetki)')),
+                                        child: Text('Ekip üyesi yap (tam yetki)')),
                                     PopupMenuItem(
                                         value: 'cik', child: Text('Saha ekibinden çıkar')),
                                   ],
