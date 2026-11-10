@@ -217,6 +217,7 @@ class Firma {
     required this.sayac,
     this.eskiKodVar = false,
     this.araciOzeti,
+    this.ayriMusteriler = const {},
   });
 
   final String id;
@@ -243,6 +244,9 @@ class Firma {
 
   /// Aracı sıralaması (yöneticinin uygulaması yazar; saha çalışanları okur).
   final AraciOzeti? araciOzeti;
+
+  /// "Aynı kişi değil" denen müşteri adı çiftleri (birleştirme önerilmez).
+  final Set<String> ayriMusteriler;
 
   bool yonetici(String uid) => yoneticiler.contains(uid);
   List<String> get birimListesi =>
@@ -280,6 +284,7 @@ class Firma {
         araciOzeti: m['araciOzet'] is Map
             ? AraciOzeti.fromMap(m['araciOzet'] as Map)
             : null,
+        ayriMusteriler: _ls(m['ayriMusteriler']).toSet(),
       );
 }
 

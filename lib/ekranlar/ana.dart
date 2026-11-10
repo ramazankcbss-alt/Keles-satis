@@ -9,6 +9,7 @@ import '../tema.dart';
 import 'aracilar.dart';
 import 'arama.dart';
 import 'ayarlar.dart';
+import 'birlestir.dart';
 import 'formlar.dart';
 import 'listeler.dart';
 import 'ozet.dart';
@@ -237,6 +238,7 @@ class _AnaSayfa extends StatelessWidget {
 
     final musteriSayisi =
         {for (final s in d.siparisler) musteriAnahtari(s.musteri)}.length;
+    final oneri = d.yonetici ? birlestirmeOneriSayisi(d) : 0;
     final urunSayisi =
         {for (final s in d.siparisler) s.urun.trim().toLowerCase()}.length;
 
@@ -360,7 +362,7 @@ class _AnaSayfa extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: RenkliKutu(
-                  ust: '$musteriSayisi kişi',
+                  ust: oneri > 0 ? '🔔 $oneri öneri' : '$musteriSayisi kişi',
                   emoji: '👥',
                   baslik: 'Müşteri bakiyeleri',
                   renk: Renk.anaKoyu,
