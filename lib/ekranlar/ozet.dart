@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../bicim.dart';
 import '../servis/veri.dart';
 import '../tema.dart';
+import 'birlestir.dart';
 import 'formlar.dart';
 import 'listeler.dart';
 
@@ -31,7 +32,31 @@ class OzetEkrani extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(musteri ? 'Müşteriler' : 'Ürünler')),
+      appBar: AppBar(
+        title: Text(musteri ? 'Müşteriler' : 'Ürünler'),
+        actions: [
+          if (musteri && durum.yonetici)
+            ListenableBuilder(
+              listenable: durum,
+              builder: (context, _) {
+                final n = birlestirmeOneriSayisi(durum);
+                return IconButton(
+                  tooltip: 'Müşteri birleştir',
+                  icon: Badge(
+                    isLabelVisible: n > 0,
+                    label: Text('$n'),
+                    backgroundColor: Renk.kirmizi,
+                    child: const Icon(Icons.merge_type),
+                  ),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => MusteriBirlestirEkrani(durum: durum))),
+                );
+              },
+            ),
+        ],
+      ),
       body: ListenableBuilder(
         listenable: durum,
         builder: (context, _) {
@@ -62,6 +87,38 @@ class OzetEkrani extends StatelessWidget {
             children: [
               if (musteri && satirlar.isNotEmpty)
                 ToplamKutusu(etiket: 'Toplam alacak', deger: tl(toplamKalan)),
+              if (musteri && durum.yonetici && satirlar.isNotEmpty)
+                Builder(builder: (context) {
+                  final n = birlestirmeOneriSayisi(durum);
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: n > 0 ? Renk.amberAcik : Renk.anaAcik,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: n > 0 ? const Color(0xFFFCD34D) : Renk.cizgi,
+                          width: 1.5),
+                    ),
+                    child: ListTile(
+                      leading: Text(n > 0 ? '🤔' : '🔗',
+                          style: const TextStyle(fontSize: 24)),
+                      title: Text(
+                          n > 0
+                              ? '$n grup benzer isim bulundu'
+                              : 'Müşteri birleştir',
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(n > 0
+                          ? 'Aynı kişiyse birleştirin, değilse "Aynı değiller" deyin.'
+                          : 'Aynı kişiyi farklı adlarla girdiyseniz tek müşteride toplayın.'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  MusteriBirlestirEkrani(durum: durum))),
+                    ),
+                  );
+                }),
               if (musteri && durum.yonetici && satirlar.isNotEmpty)
                 const Padding(
                   padding: EdgeInsets.fromLTRB(4, 0, 4, 10),

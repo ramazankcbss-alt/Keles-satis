@@ -3,6 +3,7 @@ import 'package:keles_satis/bicim.dart';
 import 'package:keles_satis/ekranlar/arama.dart';
 import 'package:keles_satis/ekranlar/formlar.dart';
 import 'package:keles_satis/modeller.dart';
+import 'package:keles_satis/servis/benzer.dart';
 import 'package:keles_satis/servis/bildirim.dart';
 
 Siparis _s({double? fiyat, bool teslim = false, List<double> odemeler = const []}) =>
@@ -23,6 +24,25 @@ Siparis _s({double? fiyat, bool teslim = false, List<double> odemeler = const []
     );
 
 void main() {
+  test('Benzer müşteri adları önerilir, farklı kişiler önerilmez', () {
+    final g = benzerGruplar([
+      'Mesut Yakut',
+      'mesut  yakut',
+      'Mesut Yakt',
+      'Derya Abla',
+      'Derya Abla Kaynanası',
+      'Ekrem Komşu',
+      'Meryem Komşu',
+    ], {});
+    expect(g.length, 1);
+    expect(g.first.toSet(), {'Mesut Yakut', 'mesut  yakut', 'Mesut Yakt'});
+    // "Aynı değil" denen çift bir daha önerilmez.
+    expect(
+        benzerGruplar(['Mesut Yakut', 'Mesut Yakt'],
+            {ciftAnahtari('Mesut Yakut', 'Mesut Yakt')}),
+        isEmpty);
+  });
+
   test('Ürün bazında satış ve alacak toplanır', () {
     final l = [
       _s(fiyat: 10, teslim: true, odemeler: [400]),
