@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../bicim.dart';
 import '../modeller.dart';
 import '../servis/bildirim.dart';
+import '../servis/okundu.dart';
 import '../servis/guncelleme.dart';
 import '../servis/veri.dart';
 import '../tema.dart';
 import 'aracilar.dart';
 import 'arama.dart';
 import 'ayarlar.dart';
+import 'bildirimler.dart';
 import 'birlestir.dart';
 import 'formlar.dart';
 import 'listeler.dart';
@@ -31,6 +33,7 @@ class _AnaKabukState extends State<AnaKabuk> {
     super.initState();
     final d = widget.durum;
     Hareketler.oturum(d.fid, d.uid, d.yonetici);
+    Okundu.yukle(d.fid, d.uid);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Bildirim.izinIste();
       if (mounted) Guncelleme.kontrolEt(context);
@@ -52,7 +55,6 @@ class _AnaKabukState extends State<AnaKabuk> {
         final nF = d.sayi(Asama.fiyat),
             nT = d.sayi(Asama.teslim),
             nC = d.sayi(Asama.tahsilat);
-        final bekleyen = nF + nT + nC;
 
         final Widget govde = switch (_sekme) {
           1 => SiparisListesi(
@@ -137,22 +139,7 @@ class _AnaKabukState extends State<AnaKabuk> {
                 icon: const Icon(Icons.search),
                 onPressed: () => _git(AramaEkrani(durum: d)),
               ),
-              IconButton(
-                tooltip: 'Bekleyen işler',
-                icon: Badge(
-                  isLabelVisible: bekleyen > 0,
-                  label: Text('$bekleyen'),
-                  backgroundColor: Renk.kirmizi,
-                  child: const Icon(Icons.notifications_outlined),
-                ),
-                onPressed: () => _sekmeyeGit(nF > 0
-                    ? 1
-                    : nT > 0
-                        ? 2
-                        : nC > 0
-                            ? 3
-                            : 0),
-              ),
+              BildirimZili(durum: d),
               IconButton(
                 tooltip: 'Ayarlar',
                 icon: const Icon(Icons.settings_outlined),
