@@ -98,15 +98,7 @@ class _AnaKabukState extends State<AnaKabuk> {
             toolbarHeight: 64,
             title: Row(
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .18),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.agriculture_outlined, color: Colors.white),
-                ),
+                Image.asset('assets/logo.png', width: 42, height: 42),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

@@ -110,6 +110,11 @@ class _SahaKabukState extends State<SahaKabuk> {
         return Scaffold(
           appBar: AppBar(
             toolbarHeight: 64,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Image.asset('assets/logo.png', width: 40, height: 40),
+            ),
+            leadingWidth: 56,
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

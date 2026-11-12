@@ -139,4 +139,36 @@ if "keles-satis.p12" not in g:
     if n != 1:
         sys.exit("android { bloğu bulunamadı")
 yaz(p, g)
+
+# --- Uygulama simgesi (Keleş Tarım tarla amblemi) --------------------------
+# ci/ikon/mipmap-*/ içindeki simgeler kopyalanır; Android 8+ için uyarlanabilir
+# simge (yeşil zemin + amblem) tanımlanır.
+import shutil
+
+RES = os.path.join(APP, "src", "main", "res")
+IKON = os.path.join(KOK, "ci", "ikon")
+for d in sorted(os.listdir(IKON)):
+    kaynak = os.path.join(IKON, d)
+    if not (d.startswith("mipmap-") and os.path.isdir(kaynak)):
+        continue
+    hedef = os.path.join(RES, d)
+    os.makedirs(hedef, exist_ok=True)
+    for f in os.listdir(kaynak):
+        shutil.copyfile(os.path.join(kaynak, f), os.path.join(hedef, f))
+os.makedirs(os.path.join(RES, "mipmap-anydpi-v26"), exist_ok=True)
+yaz(os.path.join(RES, "mipmap-anydpi-v26", "ic_launcher.xml"),
+    """<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>
+""")
+os.makedirs(os.path.join(RES, "values"), exist_ok=True)
+yaz(os.path.join(RES, "values", "ic_launcher_background.xml"),
+    """<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#1F6F4A</color>
+</resources>
+""")
+
 print("Android ayarları uygulandı:", p)

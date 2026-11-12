@@ -83,16 +83,8 @@ class _GirisEkraniState extends State<GirisEkrani> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Center(
-                      child: Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: Renk.ana,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(Icons.agriculture_outlined,
-                            color: Colors.white, size: 36),
-                      ),
+                      child: Image.asset('assets/logo.png',
+                          width: 96, height: 96),
                     ),
                     const SizedBox(height: 14),
                     const Text('Keleş Tarım',
