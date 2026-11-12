@@ -138,6 +138,18 @@ if "keles-satis.p12" not in g:
     g, n = re.subn(r"(\nandroid \{\n)", lambda x: x.group(1) + imza, g, count=1)
     if n != 1:
         sys.exit("android { bloğu bulunamadı")
+# Flutter 3.50 ile gelen Android lint, eklentilerin kodunu çözümlerken çöküyor
+# (firebase_core:lintVitalAnalyzeRelease). Sürüm derlemesinde lint kapatılır.
+if "checkReleaseBuilds" not in g:
+    lint = """
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+"""
+    g, n = re.subn(r"(\nandroid \{\n)", lambda x: x.group(1) + lint, g, count=1)
+    if n != 1:
+        sys.exit("android { bloğu bulunamadı (lint)")
 yaz(p, g)
 
 # --- Uygulama simgesi (Keleş Tarım tarla amblemi) --------------------------
