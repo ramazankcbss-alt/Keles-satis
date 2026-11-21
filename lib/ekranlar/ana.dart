@@ -15,6 +15,7 @@ import 'birlestir.dart';
 import 'formlar.dart';
 import 'listeler.dart';
 import 'ozet.dart';
+import 'paylas.dart';
 
 /// Üst başlık + sekmeler + alt menü + "Yeni Sipariş" butonu.
 class AnaKabuk extends StatefulWidget {
@@ -252,10 +253,13 @@ class _AnaSayfa extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            DurumEtiketi(
-              yazi: d.yonetici ? 'Yönetici' : 'Ekip üyesi',
-              renk: Renk.anaKoyu,
-              zemin: Renk.anaAcik,
+            ActionChip(
+              avatar: const Text('📣'),
+              label: const Text('Paylaş'),
+              backgroundColor: Renk.anaAcik,
+              side: BorderSide.none,
+              visualDensity: VisualDensity.compact,
+              onPressed: () => git(PaylasEkrani(durum: d)),
             ),
           ],
         ),

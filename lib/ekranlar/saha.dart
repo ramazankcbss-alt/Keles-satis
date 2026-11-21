@@ -10,6 +10,7 @@ import '../tema.dart';
 import 'arama.dart';
 import 'formlar.dart';
 import 'listeler.dart';
+import 'paylas.dart';
 
 /// Saha çalışanının ekranı: hızlı satış ve yalnızca kendi girdiği siparişler.
 /// Firmanın cirosu, diğer siparişler, raporlar ve ayarlar burada yoktur
@@ -239,6 +240,13 @@ class _SahaKabukState extends State<SahaKabuk> {
                 ikon: Icons.add_shopping_cart,
                 yukseklik: 58,
                 onTap: () => yeniSiparis(context, d, hizli: true),
+              ),
+              const SizedBox(height: 8),
+              Buton(
+                yazi: '📣  WhatsApp\'ta paylaş',
+                renk: ButonRenk.ikincil,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => PaylasEkrani(durum: d))),
               ),
               const SizedBox(height: 12),
               _Siralama(
